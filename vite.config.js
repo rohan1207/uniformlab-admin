@@ -11,8 +11,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Stub missing three.js inspector (used by @react-three/fiber; not in all three versions)
-      'three/addons/inspector/Inspector.js': path.resolve(__dirname, './src/stub-three-inspector.js'),
     },
   },
 
