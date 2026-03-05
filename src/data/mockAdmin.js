@@ -1,0 +1,181 @@
+// Delivery partners – in-house; first one is default assignment
+export const mockDeliveryPartners = [
+  { id: 'dp1', name: 'Rajesh K.', phone: '98765 43210', isDefault: true },
+  { id: 'dp2', name: 'Suresh M.', phone: '98765 43211', isDefault: false },
+  { id: 'dp3', name: 'Vikram D.', phone: '98765 43212', isDefault: false },
+];
+
+export const DELIVERY_STATUS_OPTIONS = [
+  'Order confirmed',
+  'Packed',
+  'Shipped',
+  'Delivered',
+  'Undelivered',
+];
+
+export const FULFILLMENT_STATUS_OPTIONS = ['Unfulfilled', 'Fulfilled'];
+
+export const mockOrders = [
+  {
+    id: 'D9750',
+    date: 'Yesterday at 2:32 pm',
+    customer: 'Dinu Rajput',
+    customerPhone: '91234 56780',
+    total: '₹1,299',
+    payment: 'Paid',
+    fulfillment: 'Fulfilled',
+    delivery: 'Delivered',
+    deliveryReason: '',
+    method: 'Free shipping',
+    tags: ['COD'],
+    hasWarning: false,
+    school: 'BVRTSE',
+    schoolName: "Bharati Vidyapeeth's Rabindranath Tagore School of Excellence",
+    assignedDeliveryPartnerId: 'dp1',
+    items: '1 item',
+    lineItems: [{ name: 'Blazer', qty: 1, size: '32', price: '₹1,299' }],
+    address: { name: 'Dinu Rajput', line1: '12, Green Valley', line2: 'Kothrud', city: 'Pune', state: 'Maharashtra', pincode: '411038' },
+  },
+  {
+    id: 'D9749',
+    date: 'Yesterday at 1:15 pm',
+    customer: 'Amit Kumar',
+    customerPhone: '91234 56781',
+    total: '₹2,450',
+    payment: 'Payment pending',
+    fulfillment: 'Unfulfilled',
+    delivery: 'Order confirmed',
+    deliveryReason: '',
+    method: 'Free shipping',
+    tags: ['UPI'],
+    hasWarning: false,
+    school: 'The Orbis School',
+    schoolName: 'The Orbis School',
+    assignedDeliveryPartnerId: 'dp1',
+    items: '3 items',
+    lineItems: [
+      { name: 'White Shirt', qty: 1, size: '20', price: '₹459' },
+      { name: 'Full Pant (Grey)', qty: 1, size: '20', price: '₹579' },
+      { name: 'Tie', qty: 1, size: '—', price: '₹189' },
+    ],
+    address: { name: 'Amit Kumar', line1: '45, ABC Apartments', line2: 'Baner', city: 'Pune', state: 'Maharashtra', pincode: '411045' },
+  },
+  {
+    id: 'D9748',
+    date: 'Saturday at 10:31 pm',
+    customer: 'Priya Sharma',
+    customerPhone: '91234 56782',
+    total: '₹899',
+    payment: 'Paid',
+    fulfillment: 'Fulfilled',
+    delivery: 'Shipped',
+    deliveryReason: '',
+    method: 'Free shipping',
+    tags: ['COD'],
+    hasWarning: false,
+    school: 'BVRTSE',
+    schoolName: "Bharati Vidyapeeth's Rabindranath Tagore School of Excellence",
+    assignedDeliveryPartnerId: 'dp2',
+    items: '2 items',
+    lineItems: [
+      { name: 'Sport T-Shirt', qty: 1, size: '18', price: '₹349' },
+      { name: 'Track Pant', qty: 1, size: '18', price: '₹499' },
+    ],
+    address: { name: 'Priya Sharma', line1: '7, XYZ Society', line2: 'Wakad', city: 'Pune', state: 'Maharashtra', pincode: '411057' },
+  },
+  {
+    id: 'D9747',
+    date: 'Saturday at 6:20 pm',
+    customer: 'Rahul Verma',
+    customerPhone: '91234 56783',
+    total: '₹1,599',
+    payment: 'Paid',
+    fulfillment: 'Unfulfilled',
+    delivery: 'Packed',
+    deliveryReason: '',
+    method: 'Free shipping',
+    tags: ['UPI'],
+    hasWarning: false,
+    school: 'Nanded City Public',
+    schoolName: "Vidya Pratishthan's Nanded City Public School",
+    assignedDeliveryPartnerId: 'dp1',
+    items: '1 item',
+    lineItems: [{ name: 'Blazer', qty: 1, size: '34', price: '₹1,599' }],
+    address: { name: 'Rahul Verma', line1: 'Block C, Lake View', line2: 'Hinjewadi', city: 'Pune', state: 'Maharashtra', pincode: '411057' },
+  },
+  {
+    id: 'D9745',
+    date: 'Friday at 11:00 am',
+    customer: 'Vikram Singh',
+    customerPhone: '91234 56784',
+    total: '₹759',
+    payment: 'Paid',
+    fulfillment: 'Fulfilled',
+    delivery: 'Undelivered',
+    deliveryReason: 'Address not found',
+    method: 'Free shipping',
+    tags: ['COD'],
+    hasWarning: true,
+    school: 'BVRTSE',
+    schoolName: "Bharati Vidyapeeth's Rabindranath Tagore School of Excellence",
+    assignedDeliveryPartnerId: 'dp3',
+    items: '1 item',
+    lineItems: [{ name: 'White Shirt', qty: 1, size: '22', price: '₹459' }],
+    address: { name: 'Vikram Singh', line1: 'Old address', line2: 'Kharadi', city: 'Pune', state: 'Maharashtra', pincode: '411014' },
+  },
+  {
+    id: 'D9743',
+    date: 'Thursday at 2:10 pm',
+    customer: 'Kiran Nair',
+    customerPhone: '91234 56785',
+    total: '₹2,100',
+    payment: 'Paid',
+    fulfillment: 'Fulfilled',
+    delivery: 'Delivered',
+    deliveryReason: '',
+    method: 'Free shipping',
+    tags: ['UPI'],
+    hasWarning: false,
+    school: 'The Orbis School',
+    schoolName: 'The Orbis School',
+    assignedDeliveryPartnerId: 'dp1',
+    items: '3 items',
+    lineItems: [
+      { name: 'White Shirt', qty: 2, size: '20', price: '₹918' },
+      { name: 'Tie', qty: 1, size: '—', price: '₹189' },
+    ],
+    address: { name: 'Kiran Nair', line1: '22, Green Park', line2: 'Aundh', city: 'Pune', state: 'Maharashtra', pincode: '411007' },
+  },
+];
+
+export const orderKpis = [
+  { label: 'Orders today', value: '0' },
+  { label: 'Items ordered', value: '0' },
+  { label: 'Returns', value: '₹0' },
+  { label: 'Orders fulfilled', value: '0' },
+  { label: 'Orders delivered', value: '0' },
+  { label: 'Order to fulfillment time', value: '0' },
+];
+
+export const mockProducts = [
+  { id: 'p1', name: 'White Shirt (Unisex)', school: 'BVRTSE', price: 459, status: 'Active', sku: 'WS-001' },
+  { id: 'p2', name: 'Blazer', school: 'BVRTSE', price: 1299, status: 'Active', sku: 'BL-002' },
+  { id: 'p3', name: 'Full Pant (Grey)', school: 'BVRTSE', price: 579, status: 'Active', sku: 'FP-003' },
+  { id: 'p4', name: 'Tie', school: 'BVRTSE', price: 189, status: 'Draft', sku: 'T-004' },
+];
+
+export const mockCustomers = [
+  { id: 'c1', name: 'Dinu Rajput', email: 'dinu@example.com', orders: 3, totalSpent: '₹4,200' },
+  { id: 'c2', name: 'Amit Kumar', email: 'amit@example.com', orders: 1, totalSpent: '₹2,450' },
+  { id: 'c3', name: 'Priya Sharma', email: 'priya@example.com', orders: 5, totalSpent: '₹6,100' },
+];
+
+export const mockDrafts = [
+  { id: 'DRAFT-1', updated: 'Today 10:30 am', customer: '—', total: '₹0' },
+  { id: 'DRAFT-2', updated: 'Yesterday 4:00 pm', customer: 'Rahul V.', total: '₹1,599' },
+];
+
+export const mockAbandoned = [
+  { id: 'AB-1', email: 'user1@example.com', cartTotal: '₹899', recovered: false },
+  { id: 'AB-2', email: 'user2@example.com', cartTotal: '₹2,100', recovered: false },
+];
