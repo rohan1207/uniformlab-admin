@@ -5,7 +5,7 @@ import {
   DELIVERY_STATUS_OPTIONS,
   FULFILLMENT_STATUS_OPTIONS,
 } from "@/data/mockAdmin";
-import { Download, Plus, AlertCircle, X, Printer } from "lucide-react";
+import { Download, Plus, AlertCircle, X, Printer, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
@@ -20,6 +20,8 @@ export default function OrdersPage() {
   const [detailOrder, setDetailOrder] = useState(null);
   const [deliveryPartners, setDeliveryPartners] = useState([]);
   const [schoolOptions, setSchoolOptions] = useState(["All schools"]);
+  const [trackingInputs, setTrackingInputs] = useState({});
+  const [savedTrackingIds, setSavedTrackingIds] = useState({});
   const iframeRef = useRef(null);
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export default function OrdersPage() {
             tags: [o.paymentMethod || "Online"],
             hasWarning: o.deliveryStatus === "Undelivered",
             assignedDeliveryPartnerId: o.assignedDeliveryPartner?._id || null,
+            trackingNumber: o.trackingNumber || "",
             items: `${count} item${count === 1 ? "" : "s"}`,
             lineItems,
             address: o.address,
@@ -225,6 +228,29 @@ export default function OrdersPage() {
         assignedDeliveryPartnerId: partnerId,
       });
     }
+  };
+
+  const handleSaveTracking = (orderId) => {
+    const val = (
+      trackingInputs[orderId] ??
+      orders.find((o) => o.id === orderId)?.trackingNumber ??
+      ""
+    ).trim();
+    updateOrder(orderId, { trackingNumber: val });
+    const order = orders.find((o) => o.id === orderId);
+    if (order?.orderMongoId) {
+      persistOrderPatch(order.orderMongoId, { trackingNumber: val });
+    }
+    setSavedTrackingIds((prev) => ({ ...prev, [orderId]: true }));
+    setTimeout(
+      () =>
+        setSavedTrackingIds((prev) => {
+          const n = { ...prev };
+          delete n[orderId];
+          return n;
+        }),
+      2000,
+    );
   };
 
   const buildInvoiceHtml = (order) => {
@@ -383,7 +409,7 @@ export default function OrdersPage() {
   <div class="totals-wrapper">
     <div class="totals-box">
       <div class="totals-row"><span>Subtotal</span><span>${order.total}</span></div>
-      <div class="totals-row"><span>Delivery charges</span><span style="color:#059669;font-weight:700;">&#8377; 0 (Free)</span></div>
+      <div class="totals-row"><span>Delivery charges</span><span style="font-weight:700;">&#8377;125</span></div>
       <div class="totals-row"><span>Total (INR)</span><span>${order.total}</span></div>
     </div>
   </div>
@@ -413,7 +439,7 @@ export default function OrdersPage() {
   <div class="footer">
     <div class="footer-left">
       <span class="footer-brand">THE UNIFORM LAB</span> &nbsp;&mdash;&nbsp; Thank you for your order!<br/>
-      <span style="font-size:11px;">23/24, Anusuya Enclave, Jagtap Chowk, Wanowrie, Pune – 411040 &nbsp;|&nbsp; &#128222; 9028552855 &nbsp;|&nbsp; help@theuniformlab.in</span>
+      <span style="font-size:11px;">Shop 23/24 , Anusuya Enclave, Jagtap Chowk, Wanowrie, Pune – 411040 &nbsp;|&nbsp; &#128222; 9028552855 &nbsp;|&nbsp; help@theuniformlab.in</span>
     </div>
     <div class="footer-right">
       <div>Generated: ${new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</div>
@@ -424,6 +450,114 @@ export default function OrdersPage() {
 </body>
 </html>`;
     return html;
+  };
+
+  const printStickers = () => {
+    const selected = orders.filter((o) => selectedIds.includes(o.id));
+    if (!selected.length) return;
+
+    const stickerHtml = selected
+      .map((o) => {
+        const addr = o.address;
+        const items = (o.lineItems || [])
+          .map(
+            (i) =>
+              `${i.name}${i.size ? ` (${i.size})` : ""}${i.color ? ` · ${i.color}` : ""} × ${i.qty}`,
+          )
+          .join("<br/>");
+        return `
+<div class="sticker">
+  <div class="sticker-head">
+    <span class="brand">UNIFORM LAB</span>
+    <span class="oid">${o.id}</span>
+  </div>
+  <div class="sticker-body">
+    <div class="row"><span class="lbl">To</span><span class="val name">${addr?.name || o.customer || "—"}</span></div>
+    ${addr ? `<div class="addr">${addr.line1}${addr.line2 ? ", " + addr.line2 : ""}, ${addr.city}, ${addr.state} – ${addr.pincode}</div>` : ""}
+    <div class="row"><span class="lbl">Phone</span><span class="val">${o.customerPhone || "—"}</span></div>
+    <div class="row items-row"><span class="lbl">Items</span><span class="val items">${items || "—"}</span></div>
+    ${o.trackingNumber ? `<div class="row track-row"><span class="lbl">Tracking</span><span class="val track">${o.trackingNumber}</span></div>` : ""}
+  </div>
+  <div class="sticker-foot">
+    <span>${o.date ? o.date.split(",")[0] : ""}</span>
+    <span>${o.total}</span>
+  </div>
+</div>`;
+      })
+      .join("");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Shipping Stickers</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;}
+  .page{width:210mm;margin:0 auto;padding:8mm;display:grid;grid-template-columns:1fr 1fr;gap:5mm;}
+  .sticker{
+    border:1.2px solid #222;
+    border-radius:4px;
+    overflow:hidden;
+    page-break-inside:avoid;
+    break-inside:avoid;
+    display:flex;
+    flex-direction:column;
+  }
+  .sticker-head{
+    background:#111;
+    color:#fff;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:3.5px 8px;
+    font-size:8px;
+    font-weight:800;
+    letter-spacing:.8px;
+    text-transform:uppercase;
+  }
+  .oid{font-size:7.5px;letter-spacing:.4px;opacity:.85;font-family:monospace;}
+  .sticker-body{
+    padding:6px 8px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .row{display:flex;gap:6px;align-items:baseline;}
+  .lbl{font-size:6.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#888;min-width:38px;flex-shrink:0;}
+  .val{font-size:8.5px;color:#111;line-height:1.3;}
+  .name{font-size:10px;font-weight:800;color:#000;}
+  .addr{font-size:7.5px;color:#444;line-height:1.4;margin-left:44px;margin-top:-1px;}
+  .items{font-size:7.5px;line-height:1.45;}
+  .track{font-family:monospace;font-size:8px;font-weight:700;color:#0050b3;letter-spacing:.3px;}
+  .items-row,.track-row{align-items:flex-start;}
+  .sticker-foot{
+    border-top:1px dashed #ccc;
+    display:flex;
+    justify-content:space-between;
+    padding:3px 8px;
+    font-size:7px;
+    color:#888;
+    font-weight:600;
+  }
+  @page{size:A4;margin:0;}
+  @media print{
+    body{background:#fff;}
+    .page{padding:5mm;}
+  }
+</style>
+</head>
+<body><div class="page">${stickerHtml}</div></body>
+</html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      setTimeout(() => w.print(), 400);
+    }
   };
 
   const printReceipt = () => {
@@ -440,9 +574,19 @@ export default function OrdersPage() {
           <>
             <button
               type="button"
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              onClick={printStickers}
+              disabled={selectedIds.length === 0}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={
+                selectedIds.length
+                  ? `Print stickers for ${selectedIds.length} selected order${selectedIds.length > 1 ? "s" : ""}`
+                  : "Select orders to print stickers"
+              }
             >
-              <Download size={16} /> Export
+              <Download size={16} />
+              {selectedIds.length > 0
+                ? `Print Stickers (${selectedIds.length})`
+                : "Print Stickers"}
             </button>
             <Link
               to="/orders/create"
@@ -563,7 +707,7 @@ export default function OrdersPage() {
                     Payment ref
                   </th>
                   <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
-                    Assign delivery
+                    Tracking No.
                   </th>
                 </tr>
               </thead>
@@ -668,7 +812,7 @@ export default function OrdersPage() {
                       {row.items}
                     </td>
                     <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
-                      {row.method}
+                      {row.method || "₹125 delivery"}
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
@@ -689,23 +833,36 @@ export default function OrdersPage() {
                       className="px-3 py-2.5 whitespace-nowrap"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <select
-                        value={
-                          row.assignedDeliveryPartnerId ||
-                          deliveryPartners[0]?._id ||
-                          ""
-                        }
-                        onChange={(e) =>
-                          handleAssignDelivery(row.id, e.target.value)
-                        }
-                        className="text-xs border border-gray-200 rounded px-2 py-1 bg-white min-w-[110px]"
-                      >
-                        {deliveryPartners.map((dp) => (
-                          <option key={dp._id} value={dp._id}>
-                            {dp.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={
+                            trackingInputs[row.id] ?? row.trackingNumber ?? ""
+                          }
+                          onChange={(e) =>
+                            setTrackingInputs((prev) => ({
+                              ...prev,
+                              [row.id]: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && handleSaveTracking(row.id)
+                          }
+                          placeholder="Tracking no."
+                          className="text-xs border border-gray-200 rounded px-2 py-1 bg-white w-[130px] focus:outline-none focus:border-green-400"
+                        />
+                        <button
+                          onClick={() => handleSaveTracking(row.id)}
+                          className={`flex items-center justify-center w-6 h-6 rounded border transition-colors ${
+                            savedTrackingIds[row.id]
+                              ? "bg-green-600 border-green-700 text-white"
+                              : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                          }`}
+                          title="Save tracking number"
+                        >
+                          <Check size={12} strokeWidth={2.5} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -733,14 +890,18 @@ export default function OrdersPage() {
             >
               <div
                 className="bg-white rounded-t-2xl md:rounded-xl shadow-2xl w-full md:max-w-5xl flex flex-col"
-                style={{ maxHeight: '95dvh' }}
+                style={{ maxHeight: "95dvh" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* ── Top bar ── */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
                   <div>
-                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Invoice</span>
-                    <h2 className="text-base font-bold text-gray-900 leading-tight">{order.id}</h2>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                      Invoice
+                    </span>
+                    <h2 className="text-base font-bold text-gray-900 leading-tight">
+                      {order.id}
+                    </h2>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -766,11 +927,15 @@ export default function OrdersPage() {
                     Fulfilment
                     <select
                       value={order.fulfillment}
-                      onChange={(e) => handleFulfillmentChange(order.id, e.target.value)}
+                      onChange={(e) =>
+                        handleFulfillmentChange(order.id, e.target.value)
+                      }
                       className="ml-1 border border-gray-200 rounded px-2 py-1 text-xs bg-white"
                     >
                       {FULFILLMENT_STATUS_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -778,34 +943,64 @@ export default function OrdersPage() {
                     Delivery
                     <select
                       value={order.delivery}
-                      onChange={(e) => handleDeliveryChange(order.id, e.target.value)}
+                      onChange={(e) =>
+                        handleDeliveryChange(order.id, e.target.value)
+                      }
                       className={`ml-1 border rounded px-2 py-1 text-xs bg-white ${
-                        order.delivery === 'Delivered' ? 'border-green-300 text-green-800' :
-                        order.delivery === 'Undelivered' ? 'border-red-300 text-red-800' : 'border-gray-200'
+                        order.delivery === "Delivered"
+                          ? "border-green-300 text-green-800"
+                          : order.delivery === "Undelivered"
+                            ? "border-red-300 text-red-800"
+                            : "border-gray-200"
                       }`}
                     >
                       {DELIVERY_STATUS_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
                       ))}
                     </select>
                   </label>
                   <label className="flex items-center gap-1.5 text-gray-600 font-medium">
-                    Assign
-                    <select
-                      value={order.assignedDeliveryPartnerId || ''}
-                      onChange={(e) => handleAssignDelivery(order.id, e.target.value)}
-                      className="ml-1 border border-gray-200 rounded px-2 py-1 text-xs bg-white"
-                    >
-                      {deliveryPartners.map((dp) => (
-                        <option key={dp._id} value={dp._id}>{dp.name}</option>
-                      ))}
-                    </select>
+                    Tracking No.
+                    <div className="flex items-center gap-1 ml-1">
+                      <input
+                        type="text"
+                        value={
+                          trackingInputs[order.id] ?? order.trackingNumber ?? ""
+                        }
+                        onChange={(e) =>
+                          setTrackingInputs((prev) => ({
+                            ...prev,
+                            [order.id]: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleSaveTracking(order.id)
+                        }
+                        placeholder="Enter tracking no."
+                        className="border border-gray-200 rounded px-2 py-1 text-xs bg-white w-[150px] focus:outline-none focus:border-green-400"
+                      />
+                      <button
+                        onClick={() => handleSaveTracking(order.id)}
+                        className={`flex items-center justify-center w-6 h-6 rounded border transition-colors ${
+                          savedTrackingIds[order.id]
+                            ? "bg-green-600 border-green-700 text-white"
+                            : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                        }`}
+                        title="Save"
+                      >
+                        <Check size={12} strokeWidth={2.5} />
+                      </button>
+                    </div>
                   </label>
-                  {order.delivery === 'Undelivered' && (
+                  {order.delivery === "Undelivered" && (
                     <input
                       type="text"
-                      value={order.deliveryReason || ''}
-                      onChange={(e) => setDeliveryReason(order.id, e.target.value)}
+                      value={order.deliveryReason || ""}
+                      onChange={(e) =>
+                        setDeliveryReason(order.id, e.target.value)
+                      }
                       placeholder="Undelivered reason…"
                       className="border border-red-200 rounded px-2 py-1 text-xs bg-white min-w-[200px]"
                     />

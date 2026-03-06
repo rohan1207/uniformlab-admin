@@ -78,15 +78,11 @@ const DEFAULT_COLORS = [
   { name: "Pink", hex: "#ffc0cb" },
   { name: "Purple", hex: "#800080" },
   { name: "Orange", hex: "#ffa500" },
-   { name: "Turquoise", hex: "#40e0d0" },
-   {name:"Khakki", hex:"#c3b091"}, 
-   {name:"Maroon", hex:"#800000"},
-   {name:"Bottle Green", hex:"#006a4e"},
-   {name:"Lavender", hex:"#e6e6fa"},
-   
-
-
-
+  { name: "Turquoise", hex: "#40e0d0" },
+  { name: "Khakki", hex: "#c3b091" },
+  { name: "Maroon", hex: "#800000" },
+  { name: "Bottle Green", hex: "#006a4e" },
+  { name: "Lavender", hex: "#ae80ef" },
 ];
 
 const EMPTY_VARIANT = {
@@ -174,7 +170,9 @@ export default function AddProductPage() {
         const catIds = (
           Array.isArray(product.categories) && product.categories.length
             ? product.categories.map(toStr)
-            : (product.category ? [toStr(product.category)] : [])
+            : product.category
+              ? [toStr(product.category)]
+              : []
         ).filter(Boolean);
         // Grade: prefer gradeLabel string, fall back to grade.name from ObjectId ref
         const gradeStr = product.gradeLabel || product.grade?.name || "";
@@ -273,7 +271,9 @@ export default function AddProductPage() {
     // Clear file input so same file can be selected again after upload
     e.target.value = "";
 
-    const category = allCategories.find((c) => c._id === selectedCategoryIds[0]);
+    const category = allCategories.find(
+      (c) => c._id === selectedCategoryIds[0],
+    );
     const categorySlug = slugify(category?.slug || category?.name, "category");
     const productName = formData.name || "product";
 
@@ -319,7 +319,10 @@ export default function AddProductPage() {
     if (colorName) {
       setFormData((prev) => {
         const existing = prev.imagesByColor[colorName] || [];
-        const combined = [...existing, ...uploadedUrls].slice(0, MAX_IMAGES_PER_SLOT);
+        const combined = [...existing, ...uploadedUrls].slice(
+          0,
+          MAX_IMAGES_PER_SLOT,
+        );
         return {
           ...prev,
           imagesByColor: { ...prev.imagesByColor, [colorName]: combined },
@@ -327,7 +330,10 @@ export default function AddProductPage() {
       });
     } else {
       setFormData((prev) => {
-        const combined = [...prev.images, ...uploadedUrls].slice(0, MAX_IMAGES_PER_SLOT);
+        const combined = [...prev.images, ...uploadedUrls].slice(
+          0,
+          MAX_IMAGES_PER_SLOT,
+        );
         return { ...prev, images: combined };
       });
     }
@@ -467,15 +473,19 @@ export default function AddProductPage() {
       schoolId: p.school,
       schoolName: schools.find((s) => s._id === p.school)?.name || "—",
       categoryId: p.category, // primary category for filtering
-      categoryName: allCategories.find((c) => c._id === p.category)?.name || "—",
+      categoryName:
+        allCategories.find((c) => c._id === p.category)?.name || "—",
       price: p.price,
     }));
   }, [allProducts, schools, allCategories]);
 
-  const recommendSchoolOptions = useMemo(() => [
-    { value: "", label: "All schools" },
-    ...schools.map((s) => ({ value: s._id, label: s.name })),
-  ], [schools]);
+  const recommendSchoolOptions = useMemo(
+    () => [
+      { value: "", label: "All schools" },
+      ...schools.map((s) => ({ value: s._id, label: s.name })),
+    ],
+    [schools],
+  );
 
   const recommendCategoryOptions = useMemo(() => {
     const catIds = [...new Set(recommendProductsList.map((p) => p.categoryId))];
@@ -542,7 +552,7 @@ export default function AddProductPage() {
 
     const payload = {
       schoolId: selectedSchool,
-      categoryIds: selectedCategoryIds,   // multi-category array
+      categoryIds: selectedCategoryIds, // multi-category array
       categoryId: selectedCategoryIds[0], // primary for backward compat
       gradeLabel: selectedGrade || undefined, // string class from school.classes
       name: formData.name.trim(),
@@ -650,87 +660,94 @@ export default function AddProductPage() {
             </div>
 
             {/* Category Selection — multi-select checkboxes */}
-            {selectedSchool && (() => {
-              const schoolClasses = schools.find((s) => s._id === selectedSchool)?.classes || [];
-              return (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Grade *
-                      {selectedCategoryIds.length > 0 && (
-                        <span className="ml-2 text-xs font-normal text-gray-500">
-                          ({selectedCategoryIds.length} selected)
-                        </span>
-                      )}
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">Select the grade(s) this product belongs to.</p>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {allCategories.map((cat) => {
-                        const checked = selectedCategoryIds.includes(cat._id);
-                        return (
-                          <label
-                            key={cat._id}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${
-                              checked
-                                ? "bg-gray-900 text-white border-gray-900"
-                                : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              className="sr-only"
-                              checked={checked}
-                              onChange={() =>
-                                setSelectedCategoryIds((prev) =>
-                                  prev.includes(cat._id)
-                                    ? prev.filter((id) => id !== cat._id)
-                                    : [...prev, cat._id]
-                                )
-                              }
-                            />
-                            {checked && <span className="text-xs">✓</span>}
-                            {cat.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                    {!showNewCategory ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowNewCategory(true)}
-                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
-                      >
-                        <Plus size={14} /> New grade
-                      </button>
-                    ) : (
-                      <div className="flex gap-2 flex-wrap items-center mt-1">
-                        <input
-                          type="text"
-                          value={newCategoryName}
-                          onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder="Grade name"
-                          className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddCategory}
-                          className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setShowNewCategory(false); setNewCategoryName(""); }}
-                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                        >
-                          Cancel
-                        </button>
+            {selectedSchool &&
+              (() => {
+                const schoolClasses =
+                  schools.find((s) => s._id === selectedSchool)?.classes || [];
+                return (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grade *
+                        {selectedCategoryIds.length > 0 && (
+                          <span className="ml-2 text-xs font-normal text-gray-500">
+                            ({selectedCategoryIds.length} selected)
+                          </span>
+                        )}
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Select the grade(s) this product belongs to.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {allCategories.map((cat) => {
+                          const checked = selectedCategoryIds.includes(cat._id);
+                          return (
+                            <label
+                              key={cat._id}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${
+                                checked
+                                  ? "bg-gray-900 text-white border-gray-900"
+                                  : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                checked={checked}
+                                onChange={() =>
+                                  setSelectedCategoryIds((prev) =>
+                                    prev.includes(cat._id)
+                                      ? prev.filter((id) => id !== cat._id)
+                                      : [...prev, cat._id],
+                                  )
+                                }
+                              />
+                              {checked && <span className="text-xs">✓</span>}
+                              {cat.name}
+                            </label>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
+                      {!showNewCategory ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewCategory(true)}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
+                        >
+                          <Plus size={14} /> New grade
+                        </button>
+                      ) : (
+                        <div className="flex gap-2 flex-wrap items-center mt-1">
+                          <input
+                            type="text"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Grade name"
+                            className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCategory}
+                            className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewCategory(false);
+                              setNewCategoryName("");
+                            }}
+                            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
 
             {/* Product Name */}
             <div>

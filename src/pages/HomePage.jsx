@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/admin/PageHeader';
-import { ShoppingBag, Users, TrendingUp, DollarSign } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { PageHeader } from "@/components/admin/PageHeader";
+import { ShoppingBag, Users, TrendingUp, DollarSign } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 export default function HomePage() {
   const { logout } = useAuth();
@@ -14,16 +14,16 @@ export default function HomePage() {
     customers: 0,
     revenueMtd: 0,
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        setError('');
+        setError("");
         let token;
         try {
-          if (typeof window !== 'undefined') {
-            const raw = window.localStorage.getItem('uniformlab_admin_auth');
+          if (typeof window !== "undefined") {
+            const raw = window.localStorage.getItem("uniformlab_admin_auth");
             token = raw ? JSON.parse(raw).token : null;
           }
         } catch {
@@ -35,10 +35,10 @@ export default function HomePage() {
         if (!res.ok) {
           if (res.status === 401) {
             logout();
-            navigate('/login', { replace: true });
+            navigate("/login", { replace: true });
             return;
           }
-          throw new Error(data?.error?.message || 'Failed to load overview');
+          throw new Error(data?.error?.message || "Failed to load overview");
         }
 
         const orders = Array.isArray(data) ? data : [];
@@ -48,13 +48,13 @@ export default function HomePage() {
         let revenueMtd = 0;
 
         orders.forEach((o) => {
-          const email = (o.customerEmail || '').toLowerCase();
-          const phone = (o.customerPhone || '').trim();
-          const name = o.customerName || '';
+          const email = (o.customerEmail || "").toLowerCase();
+          const phone = (o.customerPhone || "").trim();
+          const name = o.customerName || "";
           const key = email || phone || name || o._id;
           if (key) customerKeys.add(key);
 
-          if (o.paymentStatus === 'Paid' && o.totalAmount && o.createdAt) {
+          if (o.paymentStatus === "Paid" && o.totalAmount && o.createdAt) {
             const d = new Date(o.createdAt);
             if (
               d.getFullYear() === now.getFullYear() &&
@@ -73,7 +73,7 @@ export default function HomePage() {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(err);
-        setError(err.message || 'Failed to load overview');
+        setError(err.message || "Failed to load overview");
       }
     }
     load();
@@ -81,32 +81,32 @@ export default function HomePage() {
 
   const quickStats = [
     {
-      label: 'Total orders',
+      label: "Total orders",
       value: String(stats.orders),
       icon: ShoppingBag,
-      to: '/orders',
-      color: 'bg-blue-50 text-blue-600',
+      to: "/orders",
+      color: "bg-blue-50 text-blue-600",
     },
     {
-      label: 'Customers',
+      label: "Customers",
       value: String(stats.customers),
       icon: Users,
-      to: '/customers',
-      color: 'bg-green-50 text-green-600',
+      to: "/customers",
+      color: "bg-green-50 text-green-600",
     },
     {
-      label: 'Revenue (MTD)',
+      label: "Revenue (MTD)",
       value: `₹${stats.revenueMtd}`,
       icon: DollarSign,
-      to: '/orders',
-      color: 'bg-amber-50 text-amber-600',
+      to: "/orders",
+      color: "bg-amber-50 text-amber-600",
     },
     {
-      label: 'Growth',
-      value: '—',
+      label: "Growth",
+      value: "—",
       icon: TrendingUp,
-      to: '/analytics',
-      color: 'bg-gray-100 text-gray-700',
+      to: "/analytics",
+      color: "bg-gray-100 text-gray-700",
     },
   ];
 
@@ -131,16 +131,22 @@ export default function HomePage() {
               </span>
               <div>
                 <p className="text-sm font-medium text-gray-500">{label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-0.5">
+                  {value}
+                </p>
               </div>
             </Link>
           ))}
         </div>
         <div className="border border-gray-200 rounded-xl p-4 md:p-6 bg-gray-50/50">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Getting started</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            Getting started
+          </h2>
           <p className="text-sm text-gray-600 max-w-2xl">
-            Use the sidebar to manage orders, products, customers, marketing, discounts, content, markets, and analytics.
-            Connect your backend APIs to load real data. All tables support search, filters, and pagination.
+            Use the sidebar to manage orders, products, customers, marketing,
+            discounts, content, markets, and analytics. Connect your backend
+            APIs to load real data. All tables support search, filters, and
+            pagination.
           </p>
         </div>
       </div>

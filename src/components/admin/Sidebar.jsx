@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Home,
   ShoppingBag,
@@ -17,9 +18,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const nav = [
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+const NAV_TEMPLATE = [
   { to: "/", label: "Home", icon: Home },
-  { to: "/orders", label: "Orders", icon: ShoppingBag, count: 7803 },
+  { to: "/orders", label: "Orders", icon: ShoppingBag, countKey: "orders" },
   { to: "/schools", label: "Schools", icon: School },
   { to: "/products", label: "Products", icon: ShoppingBag },
   { to: "/delivery-partners", label: "Delivery partners", icon: Truck },
@@ -57,11 +60,40 @@ function SidebarLink({ to, label, icon: Icon, count }) {
 export function Sidebar({ isOpen, onClose }) {
   const { logout, admin } = useAuth();
   const navigate = useNavigate();
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        let token;
+        try {
+          const raw = window.localStorage.getItem("uniformlab_admin_auth");
+          token = raw ? JSON.parse(raw).token : null;
+        } catch {
+          token = null;
+        }
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE}/api/admin/orders`, { headers });
+        const data = await res.json().catch(() => []);
+        if (res.ok && Array.isArray(data)) {
+          setCounts({ orders: data.length });
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    fetchCounts();
+  }, []);
+
+  const nav = NAV_TEMPLATE.map((item) => ({
+    ...item,
+    count: item.countKey ? counts[item.countKey] : undefined,
+  }));
 
   const handleLogout = () => {
     logout();
     onClose?.();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -110,7 +142,9 @@ export function Sidebar({ isOpen, onClose }) {
       </nav>
       <div className="p-3 border-t border-gray-200 space-y-0.5">
         {admin?.email && (
-          <p className="px-3 py-1.5 text-xs text-gray-400 truncate">{admin.email}</p>
+          <p className="px-3 py-1.5 text-xs text-gray-400 truncate">
+            {admin.email}
+          </p>
         )}
         <NavLink
           to="/settings"

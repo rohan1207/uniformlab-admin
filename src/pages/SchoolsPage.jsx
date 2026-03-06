@@ -1,52 +1,68 @@
-import { useEffect, useMemo, useState } from 'react';
-import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTable } from '@/components/admin/DataTable';
-import { Plus, Edit2, Trash2, School, Upload } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useMemo, useState } from "react";
+import { PageHeader } from "@/components/admin/PageHeader";
+import { DataTable } from "@/components/admin/DataTable";
+import { Plus, Edit2, Trash2, School, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 // Default classes (Nursery to 12) – admin can edit
 const DEFAULT_CLASSES = [
-  'Nursery', 'KG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12',
+  "Nursery",
+  "KG",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
 ];
-const DEFAULT_CLASSES_STR = DEFAULT_CLASSES.join(', ');
+const DEFAULT_CLASSES_STR = DEFAULT_CLASSES.join(", ");
 
 function generateSlug(name) {
   return name
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 const columns = [
-  { key: 'name', label: 'School Name' },
-  { key: 'slug', label: 'Slug' },
-  { key: 'classes', label: 'Classes' },
-  { key: 'categories', label: 'Categories' },
-  { key: 'products', label: 'Products' },
-  { key: 'actions', label: 'Actions' },
+  { key: "order", label: "#" },
+  { key: "name", label: "School Name" },
+  { key: "slug", label: "Slug" },
+  { key: "classes", label: "Classes" },
+  { key: "categories", label: "Categories" },
+  { key: "products", label: "Products" },
+  { key: "actions", label: "Actions" },
 ];
 
 export default function SchoolsPage() {
   const { token } = useAuth();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [schools, setSchools] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSchool, setEditingSchool] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [orderInputs, setOrderInputs] = useState({});
+  const [savingOrder, setSavingOrder] = useState({});
 
   const reload = async () => {
     if (!token) return;
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       const headers = { Authorization: `Bearer ${token}` };
 
@@ -65,16 +81,21 @@ export default function SchoolsPage() {
           schoolsData?.error?.message ||
             categoriesData?.error?.message ||
             productsData?.error?.message ||
-            'Failed to load schools'
+            "Failed to load schools",
         );
       }
       setSchools(schoolsData);
       setCategories(categoriesData);
       setProducts(productsData);
+      const init = {};
+      schoolsData.forEach((s) => {
+        init[s._id] = s.displayOrder != null ? String(s.displayOrder) : "";
+      });
+      setOrderInputs(init);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(err);
-      setError(err.message || 'Failed to load schools');
+      setError(err.message || "Failed to load schools");
     } finally {
       setLoading(false);
     }
@@ -103,6 +124,30 @@ export default function SchoolsPage() {
     return map;
   }, [products]);
 
+  const saveOrder = async (schoolId) => {
+    const raw = (orderInputs[schoolId] || "").trim();
+    const num = raw === "" ? null : parseInt(raw, 10);
+    if (num !== null && (isNaN(num) || num < 1)) return;
+    setSavingOrder((prev) => ({ ...prev, [schoolId]: true }));
+    try {
+      await fetch(`${API_BASE}/api/admin/schools/${schoolId}/order`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ displayOrder: num }),
+      });
+      setSchools((prev) =>
+        prev.map((s) => (s._id === schoolId ? { ...s, displayOrder: num } : s)),
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setSavingOrder((prev) => ({ ...prev, [schoolId]: false }));
+    }
+  };
+
   const rows = useMemo(
     () =>
       schools.map((s) => ({
@@ -115,37 +160,62 @@ export default function SchoolsPage() {
         tags: s.tags || [],
         categoriesCount: categoryCounts[s._id] || 0,
         productsCount: productCounts[s._id] || 0,
+        displayOrder: s.displayOrder ?? null,
       })),
-    [schools, categoryCounts, productCounts]
+    [schools, categoryCounts, productCounts],
   );
 
   const filtered = rows.filter(
     (s) =>
       !search ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.slug.toLowerCase().includes(search.toLowerCase())
+      s.slug.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleDelete = (id) => {
-    if (confirm('Are you sure you want to delete this school? This will also delete all its products.')) {
+    if (
+      confirm(
+        "Are you sure you want to delete this school? This will also delete all its products.",
+      )
+    ) {
       fetch(`${API_BASE}/api/admin/schools/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => {
-          if (!res.ok) throw new Error('Failed to delete school');
+          if (!res.ok) throw new Error("Failed to delete school");
         })
         .then(() => reload())
         .catch((err) => {
           // eslint-disable-next-line no-console
           console.error(err);
-          alert(err.message || 'Could not delete school');
+          alert(err.message || "Could not delete school");
         });
     }
   };
 
   const renderRow = (row) => (
     <>
+      <td className="px-4 py-3">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={orderInputs[row.id] ?? ""}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^0-9]/g, "");
+            setOrderInputs((prev) => ({ ...prev, [row.id]: v }));
+          }}
+          onBlur={() => saveOrder(row.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.target.blur();
+          }}
+          onWheel={(e) => e.target.blur()}
+          disabled={!!savingOrder[row.id]}
+          className="w-14 px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:opacity-50"
+          placeholder="—"
+          title="Display order. Lower = shown first. Saved on Enter or click away."
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <School size={18} className="text-gray-400" />
@@ -235,14 +305,18 @@ export default function SchoolsPage() {
 
 function SchoolModal({ school, token, onClose, onSaved }) {
   const [formData, setFormData] = useState({
-    name: school?.name || '',
-    board: school?.level || '',
-    imageUrl: school?.imageUrl || '',
-    imagePublicId: school?.imagePublicId || '',
-    logoUrl: school?.logoUrl || '',
-    logoPublicId: school?.logoPublicId || '',
-    classes: school?.classes?.length ? school.classes.join(', ') : DEFAULT_CLASSES_STR,
-    tags: Array.isArray(school?.tags) ? school.tags.join(', ') : (school?.tags || ''),
+    name: school?.name || "",
+    board: school?.level || "",
+    imageUrl: school?.imageUrl || "",
+    imagePublicId: school?.imagePublicId || "",
+    logoUrl: school?.logoUrl || "",
+    logoPublicId: school?.logoPublicId || "",
+    classes: school?.classes?.length
+      ? school.classes.join(", ")
+      : DEFAULT_CLASSES_STR,
+    tags: Array.isArray(school?.tags)
+      ? school.tags.join(", ")
+      : school?.tags || "",
   });
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoDeleting, setLogoDeleting] = useState(false);
@@ -251,8 +325,14 @@ function SchoolModal({ school, token, onClose, onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const classes = formData.classes.split(',').map((c) => c.trim()).filter(Boolean);
-    const tags = formData.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    const classes = formData.classes
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    const tags = formData.tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
     const payload = {
       name: formData.name,
       level: formData.board || undefined,
@@ -264,10 +344,10 @@ function SchoolModal({ school, token, onClose, onSaved }) {
       tags,
     };
 
-    const token = window.localStorage.getItem('uniformlab_admin_auth');
+    const token = window.localStorage.getItem("uniformlab_admin_auth");
     let authHeader = {};
     try {
-      const parsed = JSON.parse(token || '{}');
+      const parsed = JSON.parse(token || "{}");
       if (parsed.token) {
         authHeader = { Authorization: `Bearer ${parsed.token}` };
       }
@@ -280,80 +360,107 @@ function SchoolModal({ school, token, onClose, onSaved }) {
       const url = school
         ? `${base}/api/admin/schools/${school.id || school._id}`
         : `${base}/api/admin/schools`;
-      const method = school ? 'PATCH' : 'POST';
+      const method = school ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...authHeader,
         },
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error?.message || 'Could not save school');
+        throw new Error(data?.error?.message || "Could not save school");
       }
       onSaved();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(err);
-      alert(err.message || 'Could not save school');
+      alert(err.message || "Could not save school");
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            {school ? 'Edit School' : 'Add New School'}
+            {school ? "Edit School" : "Add New School"}
           </h2>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">School Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              School Name
+            </label>
             <input
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder="e.g., Vidya Pratishthan's Nanded City Public School"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Board / Curriculum</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Board / Curriculum
+            </label>
             <select
               value={formData.board}
-              onChange={(e) => setFormData({ ...formData, board: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, board: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
             >
               <option value="">— Select board —</option>
-              <option value="CBSE">CBSE (Central Board of Secondary Education)</option>
-              <option value="ICSE">ICSE (Indian Certificate of Secondary Education)</option>
-              <option value="ISC">ISC (Indian School Certificate – Class 11-12)</option>
-              <option value="IGCSE">IGCSE (Cambridge International – O Level)</option>
+              <option value="CBSE">
+                CBSE (Central Board of Secondary Education)
+              </option>
+              <option value="ICSE">
+                ICSE (Indian Certificate of Secondary Education)
+              </option>
+              <option value="ISC">
+                ISC (Indian School Certificate – Class 11-12)
+              </option>
+              <option value="IGCSE">
+                IGCSE (Cambridge International – O Level)
+              </option>
               <option value="IB">IB (International Baccalaureate)</option>
               <option value="Cambridge A Level">Cambridge A Level</option>
               <option value="State Board">State Board (General)</option>
               <option value="Maharashtra SSC">Maharashtra SSC Board</option>
               <option value="Maharashtra HSC">Maharashtra HSC Board</option>
               <option value="Gujarat Board (GSEB)">Gujarat Board (GSEB)</option>
-              <option value="Rajasthan Board (RBSE)">Rajasthan Board (RBSE)</option>
+              <option value="Rajasthan Board (RBSE)">
+                Rajasthan Board (RBSE)
+              </option>
               <option value="UP Board (UPMSP)">UP Board (UPMSP)</option>
               <option value="MP Board (MPBSE)">MP Board (MPBSE)</option>
               <option value="Karnataka SSLC">Karnataka SSLC Board</option>
               <option value="Tamil Nadu Board">Tamil Nadu Board (TN)</option>
               <option value="Kerala Board">Kerala Board (SCERT)</option>
-              <option value="NIOS">NIOS (National Institute of Open Schooling)</option>
+              <option value="NIOS">
+                NIOS (National Institute of Open Schooling)
+              </option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">Select the curriculum / board this school follows.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Select the curriculum / board this school follows.
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">School Image</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              School Image
+            </label>
             {formData.imageUrl ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative inline-block">
@@ -370,24 +477,43 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                       setImageDeleting(true);
                       try {
                         if (schoolId) {
-                          const res = await fetch(`${API_BASE}/api/admin/schools/${schoolId}/image`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          if (!res.ok) throw new Error('Failed to delete school image');
+                          const res = await fetch(
+                            `${API_BASE}/api/admin/schools/${schoolId}/image`,
+                            {
+                              method: "DELETE",
+                              headers: { Authorization: `Bearer ${token}` },
+                            },
+                          );
+                          if (!res.ok)
+                            throw new Error("Failed to delete school image");
                         } else if (formData.imagePublicId) {
-                          const res = await fetch(`${API_BASE}/api/admin/upload/asset`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ publicId: formData.imagePublicId }),
-                          });
-                          if (!res.ok) throw new Error('Failed to delete image from storage');
+                          const res = await fetch(
+                            `${API_BASE}/api/admin/upload/asset`,
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                publicId: formData.imagePublicId,
+                              }),
+                            },
+                          );
+                          if (!res.ok)
+                            throw new Error(
+                              "Failed to delete image from storage",
+                            );
                         }
-                        setFormData((f) => ({ ...f, imageUrl: '', imagePublicId: '' }));
+                        setFormData((f) => ({
+                          ...f,
+                          imageUrl: "",
+                          imagePublicId: "",
+                        }));
                       } catch (err) {
                         // eslint-disable-next-line no-console
                         console.error(err);
-                        alert(err.message || 'Could not delete school image');
+                        alert(err.message || "Could not delete school image");
                       } finally {
                         setImageDeleting(false);
                       }
@@ -400,13 +526,15 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <span className="text-xs text-gray-500">Click trash to remove school image from storage</span>
+                <span className="text-xs text-gray-500">
+                  Click trash to remove school image from storage
+                </span>
               </div>
             ) : null}
             <div className="mt-2">
               <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
                 <Upload size={16} />
-                {imageUploading ? 'Uploading…' : 'Upload image'}
+                {imageUploading ? "Uploading…" : "Upload image"}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
@@ -415,41 +543,59 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file || !token) return;
-                    e.target.value = '';
+                    e.target.value = "";
                     setImageUploading(true);
                     try {
-                      const slug = (school?.slug || (formData.name && generateSlug(formData.name)) || 'school').trim();
+                      const slug = (
+                        school?.slug ||
+                        (formData.name && generateSlug(formData.name)) ||
+                        "school"
+                      ).trim();
                       const fd = new FormData();
-                      fd.append('file', file);
+                      fd.append("file", file);
                       const schoolId = school?.id || school?._id;
                       if (schoolId) {
-                        fd.append('schoolId', schoolId);
+                        fd.append("schoolId", schoolId);
                       } else {
-                        fd.append('schoolSlug', slug);
+                        fd.append("schoolSlug", slug);
                       }
-                      const res = await fetch(`${API_BASE}/api/admin/upload/school-image`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                        body: fd,
-                      });
+                      const res = await fetch(
+                        `${API_BASE}/api/admin/upload/school-image`,
+                        {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${token}` },
+                          body: fd,
+                        },
+                      );
                       const data = await res.json().catch(() => ({}));
-                      if (!res.ok || !data.url) throw new Error(data?.error?.message || 'Upload failed');
-                      setFormData((f) => ({ ...f, imageUrl: data.url, imagePublicId: data.publicId || '' }));
+                      if (!res.ok || !data.url)
+                        throw new Error(
+                          data?.error?.message || "Upload failed",
+                        );
+                      setFormData((f) => ({
+                        ...f,
+                        imageUrl: data.url,
+                        imagePublicId: data.publicId || "",
+                      }));
                     } catch (err) {
                       // eslint-disable-next-line no-console
                       console.error(err);
-                      alert(err.message || 'Could not upload school image');
+                      alert(err.message || "Could not upload school image");
                     } finally {
                       setImageUploading(false);
                     }
                   }}
                 />
               </label>
-              <p className="text-xs text-gray-500 mt-1">Uploaded to Cloudinary under schools/&lt;slug&gt;/image.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Uploaded to Cloudinary under schools/&lt;slug&gt;/image.
+              </p>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Logo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Logo
+            </label>
             {formData.logoUrl ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative inline-block">
@@ -466,23 +612,41 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                       setLogoDeleting(true);
                       try {
                         if (schoolId) {
-                          const res = await fetch(`${API_BASE}/api/admin/schools/${schoolId}/logo`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          if (!res.ok) throw new Error('Failed to delete logo');
+                          const res = await fetch(
+                            `${API_BASE}/api/admin/schools/${schoolId}/logo`,
+                            {
+                              method: "DELETE",
+                              headers: { Authorization: `Bearer ${token}` },
+                            },
+                          );
+                          if (!res.ok) throw new Error("Failed to delete logo");
                         } else if (formData.logoPublicId) {
-                          const res = await fetch(`${API_BASE}/api/admin/upload/asset`, {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ publicId: formData.logoPublicId }),
-                          });
-                          if (!res.ok) throw new Error('Failed to delete logo from storage');
+                          const res = await fetch(
+                            `${API_BASE}/api/admin/upload/asset`,
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                publicId: formData.logoPublicId,
+                              }),
+                            },
+                          );
+                          if (!res.ok)
+                            throw new Error(
+                              "Failed to delete logo from storage",
+                            );
                         }
-                        setFormData((f) => ({ ...f, logoUrl: '', logoPublicId: '' }));
+                        setFormData((f) => ({
+                          ...f,
+                          logoUrl: "",
+                          logoPublicId: "",
+                        }));
                       } catch (err) {
                         console.error(err);
-                        alert(err.message || 'Could not delete logo');
+                        alert(err.message || "Could not delete logo");
                       } finally {
                         setLogoDeleting(false);
                       }
@@ -495,13 +659,15 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <span className="text-xs text-gray-500">Click trash to remove logo from storage</span>
+                <span className="text-xs text-gray-500">
+                  Click trash to remove logo from storage
+                </span>
               </div>
             ) : null}
             <div className="mt-2">
               <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
                 <Upload size={16} />
-                {logoUploading ? 'Uploading…' : 'Upload'}
+                {logoUploading ? "Uploading…" : "Upload"}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
@@ -510,56 +676,83 @@ function SchoolModal({ school, token, onClose, onSaved }) {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file || !token) return;
-                    e.target.value = '';
+                    e.target.value = "";
                     setLogoUploading(true);
                     try {
-                      const slug = (school?.slug || (formData.name && generateSlug(formData.name)) || 'school').trim();
+                      const slug = (
+                        school?.slug ||
+                        (formData.name && generateSlug(formData.name)) ||
+                        "school"
+                      ).trim();
                       const fd = new FormData();
-                      fd.append('file', file);
+                      fd.append("file", file);
                       const schoolId = school?.id || school?._id;
                       if (schoolId) {
-                        fd.append('schoolId', schoolId);
+                        fd.append("schoolId", schoolId);
                       } else {
-                        fd.append('schoolSlug', slug);
+                        fd.append("schoolSlug", slug);
                       }
-                      const res = await fetch(`${API_BASE}/api/admin/upload/school-logo`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                        body: fd,
-                      });
+                      const res = await fetch(
+                        `${API_BASE}/api/admin/upload/school-logo`,
+                        {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${token}` },
+                          body: fd,
+                        },
+                      );
                       const data = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error(data?.error?.message || 'Upload failed');
-                      setFormData((f) => ({ ...f, logoUrl: data.url, logoPublicId: data.publicId }));
+                      if (!res.ok)
+                        throw new Error(
+                          data?.error?.message || "Upload failed",
+                        );
+                      setFormData((f) => ({
+                        ...f,
+                        logoUrl: data.url,
+                        logoPublicId: data.publicId,
+                      }));
                     } catch (err) {
                       console.error(err);
-                      alert(err.message || 'Could not upload logo');
+                      alert(err.message || "Could not upload logo");
                     } finally {
                       setLogoUploading(false);
                     }
                   }}
                 />
               </label>
-              <p className="text-xs text-gray-500 mt-1">Select an image from your device. Stored in Cloudinary (schools / school name / logo).</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Select an image from your device. Stored in Cloudinary (schools
+                / school name / logo).
+              </p>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Classes</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Classes
+            </label>
             <input
               type="text"
               required
               value={formData.classes}
-              onChange={(e) => setFormData({ ...formData, classes: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, classes: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder={DEFAULT_CLASSES_STR}
             />
-            <p className="text-xs text-gray-500 mt-1">Comma-separated. Default: Nursery to 12 — edit as needed.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Comma-separated. Default: Nursery to 12 — edit as needed.
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Tags
+            </label>
             <input
               type="text"
               value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, tags: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder="e.g., CBSE, ICSE, Pune (comma-separated)"
             />
@@ -576,7 +769,7 @@ function SchoolModal({ school, token, onClose, onSaved }) {
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800"
             >
-              {school ? 'Update School' : 'Add School'}
+              {school ? "Update School" : "Add School"}
             </button>
           </div>
         </form>
@@ -584,4 +777,3 @@ function SchoolModal({ school, token, onClose, onSaved }) {
     </div>
   );
 }
-
