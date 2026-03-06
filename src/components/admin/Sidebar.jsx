@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
   ShoppingBag,
@@ -13,7 +13,9 @@ import {
   Truck,
   ArrowLeftRight,
   X,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const nav = [
   { to: "/", label: "Home", icon: Home },
@@ -53,15 +55,24 @@ function SidebarLink({ to, label, icon: Icon, count }) {
 }
 
 export function Sidebar({ isOpen, onClose }) {
+  const { logout, admin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    onClose?.();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside
       className={
-        "w-64 shrink-0 bg-gray-100 border-r border-gray-200 flex flex-col min-h-screen " +
+        "w-64 shrink-0 bg-gray-100 border-r border-gray-200 flex flex-col " +
         /* Mobile: fixed drawer that slides in/out */
         "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out " +
         (isOpen ? "translate-x-0" : "-translate-x-full") +
-        /* Desktop: back to normal static position */
-        " md:relative md:translate-x-0 md:z-auto"
+        /* Desktop: sticky so it stays visible while page scrolls */
+        " md:sticky md:top-0 md:h-screen md:translate-x-0 md:z-auto"
       }
     >
       <div className="p-4 border-b border-gray-200 flex items-start justify-between">
@@ -97,7 +108,10 @@ export function Sidebar({ isOpen, onClose }) {
           </div>
         ))}
       </nav>
-      <div className="p-3 border-t border-gray-200">
+      <div className="p-3 border-t border-gray-200 space-y-0.5">
+        {admin?.email && (
+          <p className="px-3 py-1.5 text-xs text-gray-400 truncate">{admin.email}</p>
+        )}
         <NavLink
           to="/settings"
           onClick={() => onClose?.()}
@@ -106,6 +120,14 @@ export function Sidebar({ isOpen, onClose }) {
           <Settings size={18} strokeWidth={2} />
           Settings
         </NavLink>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <LogOut size={18} strokeWidth={2} className="shrink-0" />
+          Log out
+        </button>
       </div>
     </aside>
   );

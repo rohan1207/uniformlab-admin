@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { DataTable } from '@/components/admin/DataTable';
-import { Plus, Edit2, Trash2, Package, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, Filter, Copy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -125,6 +125,87 @@ export default function ProductsPage() {
     }
   };
 
+  const [duplicating, setDuplicating] = useState(null); // productId being duplicated
+
+  const handleDuplicate = async (productId) => {
+    if (!token) return;
+    try {
+      setDuplicating(productId);
+      // 1. Fetch full product data
+      const res = await fetch(`${API_BASE}/api/admin/products/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const original = await res.json();
+      if (!res.ok) throw new Error(original?.error?.message || 'Could not fetch product');
+
+      // 2. Build a clean payload — reuse all image URLs as-is (no Cloudinary re-upload)
+      //    Strip identity/timestamp fields; rename so it's obvious it's a copy
+      const {
+        _id, __v, createdAt, updatedAt, slug,  // strip these
+        name, school, category, categories,
+        gradeLabel, grade,
+        description, features, gender,
+        sizeType, sizes, colors,
+        mainImageUrl, galleryImageUrls, imagesByColor,
+        variants, tags, isActive,
+        price, compareAtPrice,
+      } = original;
+
+      const payload = {
+        schoolId: school?._id ?? school,
+        categoryIds: Array.isArray(categories) && categories.length
+          ? categories.map((c) => c?._id ?? c)
+          : (category ? [category?._id ?? category] : []),
+        categoryId: category?._id ?? category,
+        gradeLabel: gradeLabel || grade?.name || undefined,
+        name: `Copy of ${name}`,
+        description,
+        features,
+        gender,
+        sizeType,
+        sizes,
+        colors,
+        mainImageUrl,
+        galleryImageUrls,
+        // imagesByColor is a Map on the Mongoose doc — send as plain object
+        imagesByColor: imagesByColor && typeof imagesByColor === 'object'
+          ? (imagesByColor instanceof Map
+              ? Object.fromEntries(imagesByColor)
+              : imagesByColor)
+          : undefined,
+        variants: Array.isArray(variants)
+          ? variants.map(({ code, sizeLabel, gender: g, colorName, saleRate, mrp, purchaseRate }) => ({
+              code, sizeLabel, gender: g, colorName, saleRate, mrp, purchaseRate,
+            }))
+          : [],
+        tags,
+        price,
+        compareAtPrice,
+        isActive: false, // start as draft so it doesn't go live immediately
+      };
+
+      // 3. POST to create the duplicate
+      const createRes = await fetch(`${API_BASE}/api/admin/products`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const created = await createRes.json();
+      if (!createRes.ok) throw new Error(created?.error?.message || 'Failed to duplicate product');
+
+      // 4. Prepend the new product to local state — no full reload needed
+      setProducts((prev) => [created, ...prev]);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not duplicate product');
+    } finally {
+      setDuplicating(null);
+    }
+  };
+
   const fetchAll = async () => {
     if (!token) return;
     try {
@@ -178,7 +259,7 @@ export default function ProductsPage() {
   const columns = [
     { key: 'name', label: 'Product' },
     { key: 'school', label: 'School' },
-    { key: 'category', label: 'Category' },
+    { key: 'category', label: 'Grade' },
     { key: 'sizes', label: 'Sizes' },
     { key: 'colors', label: 'Colors' },
     { key: 'price', label: 'Price' },
@@ -222,6 +303,16 @@ export default function ProductsPage() {
             title="Edit"
           >
             <Edit2 size={16} />
+          </button>
+          <button
+            onClick={() => handleDuplicate(row.id)}
+            disabled={duplicating === row.id}
+            className="p-1.5 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Duplicate"
+          >
+            {duplicating === row.id
+              ? <span className="block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              : <Copy size={16} />}
           </button>
           <button
             onClick={() => handleDelete(row.id)}
@@ -279,7 +370,7 @@ export default function ProductsPage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent"
           >
-            <option value="all">All Categories</option>
+            <option value="all">All Grades</option>
             {uniqueCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}

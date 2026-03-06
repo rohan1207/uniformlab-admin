@@ -236,6 +236,7 @@ export default function SchoolsPage() {
 function SchoolModal({ school, token, onClose, onSaved }) {
   const [formData, setFormData] = useState({
     name: school?.name || '',
+    board: school?.level || '',
     imageUrl: school?.imageUrl || '',
     imagePublicId: school?.imagePublicId || '',
     logoUrl: school?.logoUrl || '',
@@ -254,6 +255,7 @@ function SchoolModal({ school, token, onClose, onSaved }) {
     const tags = formData.tags.split(',').map((t) => t.trim()).filter(Boolean);
     const payload = {
       name: formData.name,
+      level: formData.board || undefined,
       imageUrl: formData.imageUrl || undefined,
       imagePublicId: formData.imagePublicId || undefined,
       logoUrl: formData.logoUrl || undefined,
@@ -321,6 +323,34 @@ function SchoolModal({ school, token, onClose, onSaved }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder="e.g., Vidya Pratishthan's Nanded City Public School"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Board / Curriculum</label>
+            <select
+              value={formData.board}
+              onChange={(e) => setFormData({ ...formData, board: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
+            >
+              <option value="">— Select board —</option>
+              <option value="CBSE">CBSE (Central Board of Secondary Education)</option>
+              <option value="ICSE">ICSE (Indian Certificate of Secondary Education)</option>
+              <option value="ISC">ISC (Indian School Certificate – Class 11-12)</option>
+              <option value="IGCSE">IGCSE (Cambridge International – O Level)</option>
+              <option value="IB">IB (International Baccalaureate)</option>
+              <option value="Cambridge A Level">Cambridge A Level</option>
+              <option value="State Board">State Board (General)</option>
+              <option value="Maharashtra SSC">Maharashtra SSC Board</option>
+              <option value="Maharashtra HSC">Maharashtra HSC Board</option>
+              <option value="Gujarat Board (GSEB)">Gujarat Board (GSEB)</option>
+              <option value="Rajasthan Board (RBSE)">Rajasthan Board (RBSE)</option>
+              <option value="UP Board (UPMSP)">UP Board (UPMSP)</option>
+              <option value="MP Board (MPBSE)">MP Board (MPBSE)</option>
+              <option value="Karnataka SSLC">Karnataka SSLC Board</option>
+              <option value="Tamil Nadu Board">Tamil Nadu Board (TN)</option>
+              <option value="Kerala Board">Kerala Board (SCERT)</option>
+              <option value="NIOS">NIOS (National Institute of Open Schooling)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Select the curriculum / board this school follows.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">School Image</label>

@@ -7,7 +7,7 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="block md:flex min-h-screen bg-white text-gray-900">
+    <div className="block md:flex bg-white text-gray-900">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -18,7 +18,7 @@ export function AdminLayout() {
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="w-full md:flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="w-full md:flex-1 flex flex-col min-w-0">
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-30 shrink-0">
           <button

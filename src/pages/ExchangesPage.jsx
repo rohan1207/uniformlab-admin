@@ -354,7 +354,7 @@ export default function ExchangesPage() {
   }, [requests]);
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen">
       <PageHeader
         title="Exchanges"
         subtitle="Customer exchange requests. Click any row to expand and add a remark."

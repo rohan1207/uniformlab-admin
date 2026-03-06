@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { ShoppingBag, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 export default function HomePage() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     orders: 0,
     customers: 0,
@@ -30,6 +33,11 @@ export default function HomePage() {
         const res = await fetch(`${API_BASE}/api/admin/orders`, { headers });
         const data = await res.json().catch(() => []);
         if (!res.ok) {
+          if (res.status === 401) {
+            logout();
+            navigate('/login', { replace: true });
+            return;
+          }
           throw new Error(data?.error?.message || 'Failed to load overview');
         }
 

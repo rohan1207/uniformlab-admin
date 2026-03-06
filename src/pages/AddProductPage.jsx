@@ -105,14 +105,11 @@ export default function AddProductPage() {
   const [schools, setSchools] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
-  const [allGrades, setAllGrades] = useState([]);
   const [selectedSchool, setSelectedSchool] = useState(schoolId || "");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [selectedGradeId, setSelectedGradeId] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]); // multi-category
+  const [selectedGrade, setSelectedGrade] = useState(""); // string class from school.classes
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newGradeName, setNewGradeName] = useState("");
-  const [showNewGrade, setShowNewGrade] = useState(false);
   const [featureInput, setFeatureInput] = useState("");
   const [recommendFilterSchool, setRecommendFilterSchool] = useState("");
   const [recommendFilterCategory, setRecommendFilterCategory] = useState("");
@@ -149,13 +146,11 @@ export default function AddProductPage() {
       fetch(`${API_BASE}/api/admin/categories`, { headers }).then((r) =>
         r.json(),
       ),
-      fetch(`${API_BASE}/api/admin/grades`, { headers }).then((r) => r.json()),
     ])
-      .then(([schoolsData, productsData, categoriesData, gradesData]) => {
+      .then(([schoolsData, productsData, categoriesData]) => {
         if (Array.isArray(schoolsData)) setSchools(schoolsData);
         if (Array.isArray(productsData)) setAllProducts(productsData);
         if (Array.isArray(categoriesData)) setAllCategories(categoriesData);
-        if (Array.isArray(gradesData)) setAllGrades(gradesData);
       })
       .catch((e) => console.error(e))
       .finally(() => setLoadingSchools(false));
@@ -172,12 +167,20 @@ export default function AddProductPage() {
       .then((r) => r.json())
       .then((product) => {
         if (cancelled || !product || product.error) return;
-        const schoolIdVal = product.school?._id ?? product.school;
-        const categoryIdVal = product.category?._id ?? product.category;
-        const gradeIdVal = product.grade?._id ?? product.grade;
-        setSelectedSchool(schoolIdVal ?? "");
-        setSelectedCategoryId(categoryIdVal ?? "");
-        setSelectedGradeId(gradeIdVal ?? "");
+        const schoolIdVal = String(product.school?._id ?? product.school ?? "");
+        // Multi-category: prefer categories array (populated or raw IDs), fall back to single category
+        // Always normalize to plain strings to ensure .includes() comparisons work
+        const toStr = (v) => String(v?._id ?? v ?? "").trim();
+        const catIds = (
+          Array.isArray(product.categories) && product.categories.length
+            ? product.categories.map(toStr)
+            : (product.category ? [toStr(product.category)] : [])
+        ).filter(Boolean);
+        // Grade: prefer gradeLabel string, fall back to grade.name from ObjectId ref
+        const gradeStr = product.gradeLabel || product.grade?.name || "";
+        setSelectedSchool(schoolIdVal);
+        setSelectedCategoryIds(catIds);
+        setSelectedGrade(gradeStr);
         const sizeTypeForm =
           product.sizeType === "alpha"
             ? "letter"
@@ -270,7 +273,7 @@ export default function AddProductPage() {
     // Clear file input so same file can be selected again after upload
     e.target.value = "";
 
-    const category = allCategories.find((c) => c._id === selectedCategoryId);
+    const category = allCategories.find((c) => c._id === selectedCategoryIds[0]);
     const categorySlug = slugify(category?.slug || category?.name, "category");
     const productName = formData.name || "product";
 
@@ -362,7 +365,7 @@ export default function AddProductPage() {
       if (!res.ok)
         throw new Error(data?.error?.message || "Failed to create category");
       setAllCategories((prev) => [...prev, data]);
-      setSelectedCategoryId(data._id);
+      setSelectedCategoryIds((prev) => [...prev, data._id]);
       setNewCategoryName("");
       setShowNewCategory(false);
     } catch (err) {
@@ -371,30 +374,7 @@ export default function AddProductPage() {
     }
   };
 
-  const handleAddGrade = async () => {
-    if (!newGradeName.trim() || !token) return;
-    const name = newGradeName.trim();
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/grades`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(data?.error?.message || "Failed to create grade");
-      setAllGrades((prev) => [...prev, data]);
-      setSelectedGradeId(data._id);
-      setNewGradeName("");
-      setShowNewGrade(false);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Could not add grade");
-    }
-  };
+  // Grade is now sourced from the selected school's classes array — no API call needed.
 
   const handleFeatureKeyDown = (e) => {
     if (e.key === "Enter" && featureInput.trim()) {
@@ -486,9 +466,8 @@ export default function AddProductPage() {
       name: p.name,
       schoolId: p.school,
       schoolName: schools.find((s) => s._id === p.school)?.name || "—",
-      categoryId: p.category,
-      categoryName:
-        allCategories.find((c) => c._id === p.category)?.name || "—",
+      categoryId: p.category, // primary category for filtering
+      categoryName: allCategories.find((c) => c._id === p.category)?.name || "—",
       price: p.price,
     }));
   }, [allProducts, schools, allCategories]);
@@ -525,8 +504,8 @@ export default function AddProductPage() {
       alert("Please select a school.");
       return;
     }
-    if (!selectedCategoryId) {
-      alert("Please select a category.");
+    if (!selectedCategoryIds.length) {
+      alert("Please select at least one grade.");
       return;
     }
     if (!formData.name.trim()) {
@@ -563,8 +542,9 @@ export default function AddProductPage() {
 
     const payload = {
       schoolId: selectedSchool,
-      categoryId: selectedCategoryId,
-      gradeId: selectedGradeId || undefined,
+      categoryIds: selectedCategoryIds,   // multi-category array
+      categoryId: selectedCategoryIds[0], // primary for backward compat
+      gradeLabel: selectedGrade || undefined, // string class from school.classes
       name: formData.name.trim(),
       description: formData.description || undefined,
       features: Array.isArray(formData.features)
@@ -655,7 +635,8 @@ export default function AddProductPage() {
                 value={selectedSchool}
                 onChange={(e) => {
                   setSelectedSchool(e.target.value);
-                  setSelectedCategoryId("");
+                  setSelectedCategoryIds([]);
+                  setSelectedGrade("");
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               >
@@ -668,124 +649,88 @@ export default function AddProductPage() {
               </select>
             </div>
 
-            {/* Category Selection */}
-            {selectedSchool && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2 items-center">
-                  <select
-                    required
-                    value={selectedCategoryId}
-                    onChange={(e) => setSelectedCategoryId(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                  >
-                    <option value="">Select a category</option>
-                    {allCategories.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!showNewCategory ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowNewCategory(true)}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
-                    >
-                      <Plus size={14} /> New category
-                    </button>
-                  ) : (
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <input
-                        type="text"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="Category name"
-                        className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCategory}
-                        className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
-                      >
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowNewCategory(false);
-                          setNewCategoryName("");
-                        }}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                      >
-                        Cancel
-                      </button>
+            {/* Category Selection — multi-select checkboxes */}
+            {selectedSchool && (() => {
+              const schoolClasses = schools.find((s) => s._id === selectedSchool)?.classes || [];
+              return (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Grade *
+                      {selectedCategoryIds.length > 0 && (
+                        <span className="ml-2 text-xs font-normal text-gray-500">
+                          ({selectedCategoryIds.length} selected)
+                        </span>
+                      )}
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">Select the grade(s) this product belongs to.</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {allCategories.map((cat) => {
+                        const checked = selectedCategoryIds.includes(cat._id);
+                        return (
+                          <label
+                            key={cat._id}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${
+                              checked
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={checked}
+                              onChange={() =>
+                                setSelectedCategoryIds((prev) =>
+                                  prev.includes(cat._id)
+                                    ? prev.filter((id) => id !== cat._id)
+                                    : [...prev, cat._id]
+                                )
+                              }
+                            />
+                            {checked && <span className="text-xs">✓</span>}
+                            {cat.name}
+                          </label>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Grade Selection */}
-            {selectedSchool && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Grade
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2 items-center">
-                  <select
-                    value={selectedGradeId}
-                    onChange={(e) => setSelectedGradeId(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                  >
-                    <option value="">No grade</option>
-                    {allGrades.map((g) => (
-                      <option key={g._id} value={g._id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                  {!showNewGrade ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowNewGrade(true)}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
-                    >
-                      <Plus size={14} /> New grade
-                    </button>
-                  ) : (
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <input
-                        type="text"
-                        value={newGradeName}
-                        onChange={(e) => setNewGradeName(e.target.value)}
-                        placeholder="Grade name"
-                        className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                      />
+                    {!showNewCategory ? (
                       <button
                         type="button"
-                        onClick={handleAddGrade}
-                        className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
+                        onClick={() => setShowNewCategory(true)}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
                       >
-                        Add
+                        <Plus size={14} /> New grade
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowNewGrade(false);
-                          setNewGradeName("");
-                        }}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                    ) : (
+                      <div className="flex gap-2 flex-wrap items-center mt-1">
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="Grade name"
+                          className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCategory}
+                          className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowNewCategory(false); setNewCategoryName(""); }}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Product Name */}
             <div>
