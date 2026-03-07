@@ -668,7 +668,7 @@ export default function AddProductPage() {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Grade *
+                        Categories *
                         {selectedCategoryIds.length > 0 && (
                           <span className="ml-2 text-xs font-normal text-gray-500">
                             ({selectedCategoryIds.length} selected)
@@ -676,7 +676,7 @@ export default function AddProductPage() {
                         )}
                       </label>
                       <p className="text-xs text-gray-500 mb-2">
-                        Select the grade(s) this product belongs to.
+                        Select the category(s) this product belongs to.
                       </p>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {allCategories.map((cat) => {
@@ -714,7 +714,7 @@ export default function AddProductPage() {
                           onClick={() => setShowNewCategory(true)}
                           className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2"
                         >
-                          <Plus size={14} /> New grade
+                          <Plus size={14} /> New category
                         </button>
                       ) : (
                         <div className="flex gap-2 flex-wrap items-center mt-1">
@@ -722,7 +722,7 @@ export default function AddProductPage() {
                             type="text"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder="Grade name"
+                            placeholder="Category name"
                             className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
                           />
                           <button
