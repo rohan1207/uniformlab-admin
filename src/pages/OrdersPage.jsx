@@ -69,15 +69,16 @@ export default function OrdersPage() {
         }
 
         const mapped = (ordersJson || []).map((o) => {
-          const lineItems = Array.isArray(o.items)
-            ? o.items.map((i) => ({
-                name: i.productName,
-                qty: i.quantity,
-                size: i.size,
-                color: i.color || "",
-                price: `₹${i.price}`,
-              }))
-            : [];
+        const lineItems = Array.isArray(o.items)
+          ? o.items.map((i) => ({
+              name: i.productName,
+              qty: i.quantity,
+              size: i.size,
+              color: i.color || "",
+              price: `₹${i.price}`,
+              image: i.imageUrl || "",
+            }))
+          : [];
 
           const count = Array.isArray(o.items) ? o.items.length : 0;
           const schoolName = o.school && o.school.name ? o.school.name : "—";
@@ -262,7 +263,22 @@ export default function OrdersPage() {
         (i, idx) => `
         <tr>
           <td style="color:#999;">${idx + 1}</td>
-          <td><strong>${i.name}</strong></td>          <td style="text-align:center;">${i.color || "—"}</td>          <td style="text-align:center;">${i.size || "—"}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${
+                i.image
+                  ? `<div style="width:42px;height:42px;border-radius:6px;overflow:hidden;background:#f3f4f6;flex-shrink:0;border:1px solid #e5e7eb;">
+                       <img src="${i.image}" alt="${i.name || "Item"}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                     </div>`
+                  : ""
+              }
+              <div style="min-width:0;">
+                <strong>${i.name}</strong>
+              </div>
+            </div>
+          </td>
+          <td style="text-align:center;">${i.color || "—"}</td>
+          <td style="text-align:center;">${i.size || "—"}</td>
           <td style="text-align:center;">${i.qty}</td>
           <td style="text-align:right;">${i.price}</td>
           <td style="text-align:right; font-weight:600;">${i.price}</td>
@@ -384,7 +400,7 @@ export default function OrdersPage() {
     <thead>
       <tr>
         <th style="width:32px;">#</th>
-        <th>Product / Description</th>
+        <th>Product / Image</th>
         <th class="c" style="width:80px;">Colour</th>
         <th class="c" style="width:64px;">Size</th>
         <th class="c" style="width:52px;">Qty</th>
@@ -650,9 +666,10 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1000px]">
+        <div className="border border-gray-200 rounded-xl bg-white">
+          <div className="overflow-x-scroll rounded-xl">
+            {/* min-w forces the table wider than the window so internal horizontal scroll always works */}
+            <table className="text-sm min-w-[1600px] w-max">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-10 px-3 py-2.5 text-left">
@@ -670,43 +687,43 @@ export default function OrdersPage() {
                       className="rounded border-gray-300"
                     />
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[160px]">
                     Order
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[155px]">
                     Date
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[120px]">
                     Customer
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[200px]">
                     School
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[80px]">
                     Total
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[90px]">
                     Payment
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[130px]">
                     Fulfillment
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[150px]">
                     Delivery
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[60px]">
                     Items
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[110px]">
                     Method
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[80px]">
                     Tags
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[150px]">
                     Payment ref
                   </th>
-                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <th className="px-3 py-2.5 text-left font-semibold text-gray-700 whitespace-nowrap min-w-[160px]">
                     Tracking No.
                   </th>
                 </tr>

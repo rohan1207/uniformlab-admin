@@ -56,9 +56,9 @@ export function DataTable({
         </button>
       </div>
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        {/* Explicit horizontal scrollbar for table */}
-        <div className="overflow-x-scroll overflow-y-hidden">
-          <table className="w-full text-sm min-w-[560px]">
+        {/* Table is responsive: no forced min-width, cells can wrap to avoid horizontal scroll */}
+        <div className="overflow-y-hidden">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 {selectable && (
@@ -72,9 +72,16 @@ export function DataTable({
                   </th>
                 )}
                 {columns.map((col) => (
-                  <th key={col.key} className="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap">
-                    {col.label}
-                    {col.sortable && <span className="ml-1 text-gray-400">↓</span>}
+                  <th
+                    key={col.key}
+                    className="px-4 py-3 text-left font-semibold text-gray-700 align-top break-words"
+                  >
+                    <div className="leading-snug">{col.label}</div>
+                    {col.sortable && (
+                      <span className="ml-1 text-gray-400 inline-block align-middle">
+                        ↓
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>

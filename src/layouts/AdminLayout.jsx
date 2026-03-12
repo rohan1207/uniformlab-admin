@@ -7,7 +7,7 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-white text-gray-900 md:flex md:overflow-hidden">
+    <div className="min-h-screen w-full bg-white text-gray-900 md:flex">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -19,7 +19,7 @@ export function AdminLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Right side: top bar + scrollable content area */}
-      <div className="flex-1 min-w-0 flex flex-col md:h-screen md:overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col md:h-screen">
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-30 shrink-0">
           <button
@@ -38,8 +38,8 @@ export function AdminLayout() {
           </div>
         </header>
 
-        {/* Scrollable content */}
-        <main className="flex-1 min-h-0 overflow-auto">
+        {/* Scrollable content — overflow-scroll forces BOTH scrollbars to always render */}
+        <main className="flex-1 min-h-0 overflow-scroll">
           <Outlet />
         </main>
       </div>
