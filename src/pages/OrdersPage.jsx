@@ -24,6 +24,10 @@ export default function OrdersPage() {
   const [savedTrackingIds, setSavedTrackingIds] = useState({});
   const iframeRef = useRef(null);
 
+  // Mirror scrollbar refs — top dummy bar synced with actual table scroll
+  const topScrollRef = useRef(null);
+  const tableScrollRef = useRef(null);
+
   useEffect(() => {
     async function load() {
       try {
@@ -666,10 +670,41 @@ export default function OrdersPage() {
           </div>
         </div>
 
+        {/* ── Top mirror scrollbar — scrolling this also scrolls the table ── */}
+        <div
+          ref={topScrollRef}
+          onScroll={(e) => {
+            if (tableScrollRef.current) {
+              tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+            }
+          }}
+          style={{
+            overflowX: "scroll",
+            overflowY: "hidden",
+            height: 14,
+            marginBottom: 4,
+            borderRadius: 6,
+            background: "#f1f5f9",
+            border: "1px solid #e2e8f0",
+            cursor: "col-resize",
+          }}
+        >
+          {/* phantom spacer — exactly same min-width as the table */}
+          <div style={{ minWidth: 2200, height: 1 }} />
+        </div>
+
         <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, background: "#fff" }}>
-          <div style={{ overflowX: "scroll", overflowY: "visible", borderRadius: 12 }}>
+          <div
+            ref={tableScrollRef}
+            onScroll={(e) => {
+              if (topScrollRef.current) {
+                topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+              }
+            }}
+            style={{ overflowX: "scroll", overflowY: "visible", borderRadius: 12 }}
+          >
             {/* table is always wider than any laptop screen — forces horizontal scrollbar */}
-            <table style={{ fontSize: 13, minWidth: 1600, width: "max-content", borderCollapse: "collapse" }}>
+            <table style={{ fontSize: 13, minWidth: 2200, width: "max-content", borderCollapse: "collapse" }}>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-10 px-3 py-2.5 text-left">
