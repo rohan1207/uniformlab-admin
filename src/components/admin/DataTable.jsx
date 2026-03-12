@@ -16,7 +16,8 @@ export function DataTable({
   onSelectOne,
 }) {
   return (
-    <div className="px-3 md:px-6 pb-8 overflow-auto">
+    // Always render explicit scrollbars for both directions
+    <div className="px-3 md:px-6 pb-8 overflow-scroll">
       <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
         {filterTabs?.map((tab) => (
           <button
@@ -55,8 +56,8 @@ export function DataTable({
         </button>
       </div>
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        {/* Horizontal scroll container (top & bottom) */}
-        <div className="overflow-x-auto overflow-y-hidden">
+        {/* Explicit horizontal scrollbar for table */}
+        <div className="overflow-x-scroll overflow-y-hidden">
           <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
