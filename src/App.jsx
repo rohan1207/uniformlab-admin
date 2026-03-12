@@ -23,6 +23,7 @@ import CreateOrderPage from "@/pages/CreateOrderPage";
 import ExchangesPage from "@/pages/ExchangesPage";
 import LoginPage from "@/pages/LoginPage";
 import { useAuth } from "@/contexts/AuthContext";
+import { OrdersCountProvider } from "@/contexts/OrdersCountContext";
 
 function RequireAuth({ children }) {
   const { isAuthenticated } = useAuth();
@@ -50,7 +51,9 @@ export default function App() {
           path="/"
           element={
             <RequireAuth>
-              <AdminLayout />
+              <OrdersCountProvider>
+                <AdminLayout />
+              </OrdersCountProvider>
             </RequireAuth>
           }
         >

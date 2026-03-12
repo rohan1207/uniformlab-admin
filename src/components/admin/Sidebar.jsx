@@ -1,5 +1,4 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 import {
   Home,
   ShoppingBag,
@@ -17,12 +16,11 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+import { useOrdersCount } from "@/contexts/OrdersCountContext";
 
 const NAV_TEMPLATE = [
   { to: "/", label: "Home", icon: Home },
-  { to: "/orders", label: "Orders", icon: ShoppingBag, countKey: "orders" },
+  { to: "/orders", label: "Orders", icon: ShoppingBag, countKey: "unfulfilled" },
   { to: "/schools", label: "Schools", icon: School },
   { to: "/products", label: "Products", icon: ShoppingBag },
   { to: "/delivery-partners", label: "Delivery partners", icon: Truck },
@@ -35,7 +33,7 @@ const NAV_TEMPLATE = [
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
-function SidebarLink({ to, label, icon: Icon, count }) {
+function SidebarLink({ to, label, icon: Icon, count, isAlert }) {
   return (
     <NavLink
       to={to}
@@ -48,9 +46,16 @@ function SidebarLink({ to, label, icon: Icon, count }) {
     >
       {Icon && <Icon size={18} strokeWidth={2} className="shrink-0" />}
       <span className="truncate">{label}</span>
-      {count != null && (
-        <span className="ml-auto text-xs text-gray-500 tabular-nums">
-          {count.toLocaleString()}
+      {count != null && count > 0 && (
+        <span
+          className={
+            "ml-auto min-w-[1.25rem] px-1.5 py-0.5 rounded-full text-xs font-bold tabular-nums text-center " +
+            (isAlert
+              ? "bg-amber-500 text-white animate-pulse shadow-sm"
+              : "text-gray-500")
+          }
+        >
+          {count > 99 ? "99+" : count.toLocaleString()}
         </span>
       )}
     </NavLink>
@@ -60,34 +65,12 @@ function SidebarLink({ to, label, icon: Icon, count }) {
 export function Sidebar({ isOpen, onClose }) {
   const { logout, admin } = useAuth();
   const navigate = useNavigate();
-  const [counts, setCounts] = useState({});
-
-  useEffect(() => {
-    async function fetchCounts() {
-      try {
-        let token;
-        try {
-          const raw = window.localStorage.getItem("uniformlab_admin_auth");
-          token = raw ? JSON.parse(raw).token : null;
-        } catch {
-          token = null;
-        }
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API_BASE}/api/admin/orders`, { headers });
-        const data = await res.json().catch(() => []);
-        if (res.ok && Array.isArray(data)) {
-          setCounts({ orders: data.length });
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    fetchCounts();
-  }, []);
+  const { unfulfilledCount } = useOrdersCount();
 
   const nav = NAV_TEMPLATE.map((item) => ({
     ...item,
-    count: item.countKey ? counts[item.countKey] : undefined,
+    count: item.countKey === "unfulfilled" ? unfulfilledCount : undefined,
+    isAlert: item.countKey === "unfulfilled" && unfulfilledCount > 0,
   }));
 
   const handleLogout = () => {
@@ -136,6 +119,7 @@ export function Sidebar({ isOpen, onClose }) {
               label={item.label}
               icon={item.icon}
               count={item.count}
+              isAlert={item.isAlert}
             />
           </div>
         ))}
