@@ -16,7 +16,7 @@ export function DataTable({
   onSelectOne,
 }) {
   return (
-    <div className="px-3 md:px-6 pb-8">
+    <div className="px-3 md:px-6 pb-8 overflow-auto">
       <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
         {filterTabs?.map((tab) => (
           <button
@@ -55,7 +55,8 @@ export function DataTable({
         </button>
       </div>
       <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-        <div className="overflow-x-auto">
+        {/* Horizontal scroll container (top & bottom) */}
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
