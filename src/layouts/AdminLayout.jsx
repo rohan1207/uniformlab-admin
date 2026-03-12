@@ -19,7 +19,10 @@ export function AdminLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Right side: top bar + scrollable content area */}
-      <div className="flex-1 min-w-0 flex flex-col md:h-screen">
+      <div
+        className="flex-1 min-w-0 flex flex-col"
+        style={{ height: "100vh", overflow: "hidden" }}
+      >
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-30 shrink-0">
           <button
@@ -38,8 +41,14 @@ export function AdminLayout() {
           </div>
         </header>
 
-        {/* Scrollable content — overflow-scroll forces BOTH scrollbars to always render */}
-        <main className="flex-1 min-h-0 overflow-scroll">
+        {/* Scrollable content — inline style so it cannot be purged or overridden */}
+        <main
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflow: "scroll",
+          }}
+        >
           <Outlet />
         </main>
       </div>

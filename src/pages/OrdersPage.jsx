@@ -666,10 +666,10 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <div className="border border-gray-200 rounded-xl bg-white">
-          <div className="overflow-x-scroll rounded-xl">
-            {/* min-w forces the table wider than the window so internal horizontal scroll always works */}
-            <table className="text-sm min-w-[1600px] w-max">
+        <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, background: "#fff" }}>
+          <div style={{ overflowX: "scroll", overflowY: "visible", borderRadius: 12 }}>
+            {/* table is always wider than any laptop screen — forces horizontal scrollbar */}
+            <table style={{ fontSize: 13, minWidth: 1600, width: "max-content", borderCollapse: "collapse" }}>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-10 px-3 py-2.5 text-left">
