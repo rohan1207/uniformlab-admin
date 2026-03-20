@@ -74,6 +74,7 @@ export default function App() {
           <Route path="global-seo" element={<GlobalSeoPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

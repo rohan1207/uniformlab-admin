@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [error, setError] = useState("");
   const [orderInputs, setOrderInputs] = useState({}); // productId -> string value
   const [savingOrder, setSavingOrder] = useState({}); // productId -> bool
+  const [savingStock, setSavingStock] = useState({}); // productId -> bool
 
   useEffect(() => {
     if (!token) return;
@@ -140,6 +141,7 @@ export default function ProductsPage() {
           sizes: p.sizes || [],
           colors: colorNames,
           hasColorVariants: colorNames.length > 1,
+          manualOutOfStock: p.manualOutOfStock === true,
           schoolId: p.school,
           schoolName: school?.name || "—",
           categoryId: p.category,
@@ -148,6 +150,42 @@ export default function ProductsPage() {
       }),
     [products, schoolMap, categoryMap],
   );
+
+  const handleManualOutOfStock = async (productId, nextOutOfStock) => {
+    if (!token) return;
+    setSavingStock((prev) => ({ ...prev, [productId]: true }));
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/admin/products/${productId}/availability`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ manualOutOfStock: nextOutOfStock }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error?.message || "Failed to update availability");
+      }
+
+      setProducts((prev) =>
+        prev.map((p) =>
+          p._id === productId
+            ? { ...p, manualOutOfStock: nextOutOfStock }
+            : p,
+        ),
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      alert(err.message || "Could not update stock");
+    } finally {
+      setSavingStock((prev) => ({ ...prev, [productId]: false }));
+    }
+  };
 
   const filtered = allProducts.filter((p) => {
     const matchesSearch =
@@ -365,6 +403,7 @@ export default function ProductsPage() {
     { key: "sizes", label: "Sizes" },
     { key: "colors", label: "Colors" },
     { key: "price", label: "Price" },
+    { key: "stock", label: "Stock" },
     { key: "actions", label: "Actions" },
   ];
 
@@ -432,6 +471,22 @@ export default function ProductsPage() {
         )}
       </td>
       <td className="px-4 py-3 font-medium">₹{row.price}</td>
+
+      <td className="px-4 py-3">
+        <select
+          value={row.manualOutOfStock ? "out" : "in"}
+          disabled={!!savingStock[row.id]}
+          onChange={(e) => {
+            const next = e.target.value === "out";
+            handleManualOutOfStock(row.id, next);
+          }}
+          className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:opacity-60"
+        >
+          <option value="in">In stock</option>
+          <option value="out">Out of stock</option>
+        </select>
+      </td>
+
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <button

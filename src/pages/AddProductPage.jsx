@@ -121,6 +121,9 @@ export default function AddProductPage() {
     sizeType: "none",
     sizes: [],
     colors: [],
+    manualOutOfStock: false,
+    // Map { [colorName]: true } meaning that specific color is out of stock
+    outOfStockByColor: {},
     images: [],
     hasColorVariants: false,
     imagesByColor: {},
@@ -196,6 +199,18 @@ export default function AddProductPage() {
             imagesByColor = { ...product.imagesByColor };
           }
         }
+
+        // Manual stock per color (Map/Object) -> plain object for the form
+        let outOfStockByColor = {};
+        if (product.outOfStockByColor) {
+          if (product.outOfStockByColor instanceof Map) {
+            product.outOfStockByColor.forEach((v, key) => {
+              outOfStockByColor[key] = v === true;
+            });
+          } else if (typeof product.outOfStockByColor === "object") {
+            outOfStockByColor = { ...product.outOfStockByColor };
+          }
+        }
         const variantsFromProduct =
           Array.isArray(product.variants) && product.variants.length
             ? product.variants.map((v) => ({
@@ -221,6 +236,8 @@ export default function AddProductPage() {
           hasColorVariants:
             Array.isArray(product.colors) && product.colors.length > 0,
           imagesByColor,
+          manualOutOfStock: product.manualOutOfStock === true,
+          outOfStockByColor,
           description: product.description || "",
           features: Array.isArray(product.features) ? product.features : [],
           tags: Array.isArray(product.tags)
@@ -246,14 +263,21 @@ export default function AddProductPage() {
   }, [formData.variants]);
 
   const handleColorToggle = (color) => {
+    const exists = formData.colors.some((c) => c.name === color.name);
+    const nextColors = exists
+      ? formData.colors.filter((c) => c.name !== color.name)
+      : [...formData.colors, color];
+
+    const nextOutOfStockByColor = { ...(formData.outOfStockByColor || {}) };
+    if (exists) {
+      delete nextOutOfStockByColor[color.name];
+    }
+
     setFormData({
       ...formData,
-      colors: formData.colors.some((c) => c.name === color.name)
-        ? formData.colors.filter((c) => c.name !== color.name)
-        : [...formData.colors, color],
-      hasColorVariants: formData.colors.some((c) => c.name === color.name)
-        ? formData.colors.filter((c) => c.name !== color.name).length > 0
-        : true,
+      colors: nextColors,
+      hasColorVariants: nextColors.length > 0,
+      outOfStockByColor: nextOutOfStockByColor,
     });
   };
 
@@ -581,6 +605,8 @@ export default function AddProductPage() {
         .map((t) => t.trim())
         .filter(Boolean),
       isActive: true,
+      manualOutOfStock: !!formData.manualOutOfStock,
+      outOfStockByColor: formData.outOfStockByColor || {},
     };
 
     try {
@@ -924,6 +950,7 @@ export default function AddProductPage() {
                       ...formData,
                       hasColorVariants: !formData.hasColorVariants,
                       colors: formData.hasColorVariants ? [] : formData.colors,
+                      outOfStockByColor: formData.hasColorVariants ? {} : formData.outOfStockByColor,
                       imagesByColor: formData.hasColorVariants
                         ? {}
                         : formData.imagesByColor,
@@ -939,6 +966,30 @@ export default function AddProductPage() {
                 Turn off for items like belt, tie where color is not needed.
               </p>
             </div>
+
+          {/* Whole product availability (manual override) */}
+          <div className="mt-4">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.manualOutOfStock}
+                onChange={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    manualOutOfStock: !prev.manualOutOfStock,
+                  }))
+                }
+                className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Whole product: Out of stock
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              When enabled, this product will be disabled for all colors and the
+              customer will be able to request a “Notify me” update.
+            </p>
+          </div>
 
             {/* Colors (only when hasColorVariants) */}
             {formData.hasColorVariants && (
@@ -970,6 +1021,54 @@ export default function AddProductPage() {
                   <p className="text-xs text-gray-500 mt-2">
                     Selected: {formData.colors.map((c) => c.name).join(", ")}
                   </p>
+                )}
+
+                {formData.colors.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Color availability
+                    </label>
+                    <div className="space-y-2">
+                      {formData.colors.map((color) => {
+                        const isOut = formData.outOfStockByColor?.[color.name] === true;
+                        return (
+                          <label
+                            key={color.name}
+                            className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-4 h-4 rounded border border-gray-300"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                              <span className="text-sm font-semibold text-gray-800">
+                                {color.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                {isOut ? "Out of stock" : "In stock"}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={isOut}
+                                onChange={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    outOfStockByColor: {
+                                      ...(prev.outOfStockByColor || {}),
+                                      [color.name]: !isOut,
+                                    },
+                                  }))
+                                }
+                                className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                              />
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

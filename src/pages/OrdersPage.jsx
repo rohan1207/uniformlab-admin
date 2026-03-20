@@ -74,18 +74,37 @@ export default function OrdersPage() {
 
         const mapped = (ordersJson || []).map((o) => {
         const lineItems = Array.isArray(o.items)
-          ? o.items.map((i) => ({
-              name: i.productName,
-              qty: i.quantity,
-              size: i.size,
-              color: i.color || "",
-              price: `₹${i.price}`,
-              image: i.imageUrl || "",
-            }))
+          ? o.items.map((i) => {
+              const unitPriceNum = Number(i.price || 0);
+              const qtyNum = Number(i.quantity || 0);
+              const lineAmountNum = unitPriceNum * qtyNum;
+              return {
+                name: i.productName,
+                qty: i.quantity,
+                size: i.size,
+                color: i.color || "",
+                price: `₹${unitPriceNum}`,
+                unitPriceNum,
+                lineAmountNum,
+                lineAmount: `₹${lineAmountNum}`,
+                image: i.imageUrl || "",
+              };
+            })
           : [];
 
           const count = Array.isArray(o.items) ? o.items.length : 0;
           const schoolName = o.school && o.school.name ? o.school.name : "—";
+
+          const deliveryChargeNum = Number(
+            o.deliveryCharge != null ? o.deliveryCharge : 125,
+          );
+          const itemsSubtotalNum = lineItems.reduce(
+            (sum, li) => sum + Number(li.lineAmountNum || 0),
+            0,
+          );
+          const grandTotalNum = Number(
+            o.totalAmount != null ? o.totalAmount : itemsSubtotalNum + deliveryChargeNum,
+          );
 
           return {
             id: o.uniqueOrderId,
@@ -95,7 +114,9 @@ export default function OrdersPage() {
             customerPhone: o.customerPhone,
             school: schoolName,
             schoolName,
-            total: `₹${o.totalAmount}`,
+            total: `₹${grandTotalNum}`,
+            itemsSubtotal: `₹${itemsSubtotalNum}`,
+            deliveryCharge: `₹${deliveryChargeNum}`,
             payment: o.paymentStatus === "Paid" ? "Paid" : "Payment pending",
             fulfillment: o.fulfillmentStatus,
             delivery: o.deliveryStatus,
@@ -285,7 +306,7 @@ export default function OrdersPage() {
           <td style="text-align:center;">${i.size || "—"}</td>
           <td style="text-align:center;">${i.qty}</td>
           <td style="text-align:right;">${i.price}</td>
-          <td style="text-align:right; font-weight:600;">${i.price}</td>
+          <td style="text-align:right; font-weight:600;">${i.lineAmount || i.price}</td>
         </tr>`,
       )
       .join("");
@@ -428,8 +449,8 @@ export default function OrdersPage() {
   <!-- ═══ TOTALS ═══ -->
   <div class="totals-wrapper">
     <div class="totals-box">
-      <div class="totals-row"><span>Subtotal</span><span>${order.total}</span></div>
-      <div class="totals-row"><span>Delivery charges</span><span style="font-weight:700;">&#8377;125</span></div>
+      <div class="totals-row"><span>Items total</span><span>${order.itemsSubtotal || order.total}</span></div>
+      <div class="totals-row"><span>Delivery charges</span><span style="font-weight:700;">${order.deliveryCharge || "₹125"}</span></div>
       <div class="totals-row"><span>Total (INR)</span><span>${order.total}</span></div>
     </div>
   </div>
