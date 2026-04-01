@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { ShoppingBag, Users, TrendingUp, DollarSign } from "lucide-react";
+import { ShoppingBag, Users, TrendingUp, IndianRupee } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
@@ -27,6 +27,7 @@ export default function HomePage() {
     customers: 0,
     revenueMtd: 0,
     revenueAllTime: 0,
+    orderCountMtd: 0,
   });
   const [error, setError] = useState("");
 
@@ -75,6 +76,7 @@ export default function HomePage() {
           customers: Number(data.customerCount) || 0,
           revenueMtd,
           revenueAllTime,
+          orderCountMtd: Number(data.orderCountMtd) || 0,
         });
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -85,7 +87,7 @@ export default function HomePage() {
     load();
   }, []);
 
-  const quickStats = [
+  const overviewStats = [
     {
       label: "Total orders",
       value: String(stats.orders),
@@ -99,14 +101,6 @@ export default function HomePage() {
       icon: Users,
       to: "/customers",
       color: "bg-green-50 text-green-600",
-    },
-    {
-      label: "Revenue (MTD)",
-      value: formatInr(stats.revenueMtd),
-      sub: `All-time ${formatInr(stats.revenueAllTime)}`,
-      icon: DollarSign,
-      to: "/orders",
-      color: "bg-amber-50 text-amber-600",
     },
     {
       label: "Growth",
@@ -126,8 +120,8 @@ export default function HomePage() {
             {error}
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {quickStats.map(({ label, value, sub, icon: Icon, to, color }) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {overviewStats.map(({ label, value, icon: Icon, to, color }) => (
             <Link
               key={label}
               to={to}
@@ -141,12 +135,62 @@ export default function HomePage() {
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5 tabular-nums break-words leading-tight">
                   {value}
                 </p>
-                {sub != null && sub !== "" && (
-                  <p className="text-xs text-gray-500 mt-1 tabular-nums break-words">{sub}</p>
-                )}
               </div>
             </Link>
           ))}
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Revenue
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/orders"
+              className="border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all flex items-start gap-4 bg-white"
+            >
+              <span className="p-2.5 rounded-lg bg-amber-50 text-amber-600">
+                <IndianRupee size={22} strokeWidth={2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  This month’s revenue
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Current calendar month (India time)
+                </p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2 tabular-nums break-words leading-tight">
+                  {formatInr(stats.revenueMtd)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats.orderCountMtd} order
+                  {stats.orderCountMtd === 1 ? "" : "s"} this month
+                </p>
+              </div>
+            </Link>
+            <Link
+              to="/orders"
+              className="border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all flex items-start gap-4 bg-white"
+            >
+              <span className="p-2.5 rounded-lg bg-teal-50 text-teal-700">
+                <IndianRupee size={22} strokeWidth={2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Total revenue
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  All orders to date (sum of order totals)
+                </p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2 tabular-nums break-words leading-tight">
+                  {formatInr(stats.revenueAllTime)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats.orders} order{stats.orders === 1 ? "" : "s"} total
+                </p>
+              </div>
+            </Link>
+          </div>
         </div>
         <div className="border border-gray-200 rounded-xl p-4 md:p-6 bg-gray-50/50">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">
