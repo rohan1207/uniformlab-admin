@@ -6,6 +6,19 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
+/** Full amount with Indian grouping only (e.g. ₹5,80,000) — never compact / “L” style. */
+function formatInr(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return "₹0";
+  const digits = new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    useGrouping: true,
+    notation: "standard",
+  }).format(Math.round(n));
+  return `₹${digits}`;
+}
+
 export default function HomePage() {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -54,13 +67,16 @@ export default function HomePage() {
           const key = email || phone || name || o._id;
           if (key) customerKeys.add(key);
 
-          if (o.paymentStatus === "Paid" && o.totalAmount && o.createdAt) {
+          // MTD sales = sum of all placed orders this month (COD is Pending but still revenue).
+          // Previously only paymentStatus === "Paid" was counted, which excluded almost all COD.
+          const amt = Number(o.totalAmount);
+          if (Number.isFinite(amt) && amt > 0 && o.createdAt) {
             const d = new Date(o.createdAt);
             if (
               d.getFullYear() === now.getFullYear() &&
               d.getMonth() === now.getMonth()
             ) {
-              revenueMtd += Number(o.totalAmount) || 0;
+              revenueMtd += amt;
             }
           }
         });
@@ -96,7 +112,7 @@ export default function HomePage() {
     },
     {
       label: "Revenue (MTD)",
-      value: `₹${stats.revenueMtd}`,
+      value: formatInr(stats.revenueMtd),
       icon: DollarSign,
       to: "/orders",
       color: "bg-amber-50 text-amber-600",
@@ -131,7 +147,7 @@ export default function HomePage() {
               </span>
               <div>
                 <p className="text-sm font-medium text-gray-500">{label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5 tabular-nums break-words leading-tight">
                   {value}
                 </p>
               </div>

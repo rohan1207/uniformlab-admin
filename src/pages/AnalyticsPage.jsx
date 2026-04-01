@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/admin/PageHeader';
 import { BarChart3 } from 'lucide-react';
 
 const summaryCards = [
-  { label: 'Total sales', value: '₹12.4L', change: '+8%' },
+  { label: 'Total sales', value: '₹12,40,000', change: '+8%' },
   { label: 'Orders', value: '7,803', change: '+12%' },
   { label: 'Average order value', value: '₹1,589', change: '-2%' },
   { label: 'Conversion rate', value: '2.4%', change: '+0.3%' },
