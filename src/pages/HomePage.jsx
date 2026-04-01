@@ -26,6 +26,7 @@ export default function HomePage() {
     orders: 0,
     customers: 0,
     revenueMtd: 0,
+    revenueAllTime: 0,
   });
   const [error, setError] = useState("");
 
@@ -43,8 +44,10 @@ export default function HomePage() {
           token = null;
         }
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API_BASE}/api/admin/orders`, { headers });
-        const data = await res.json().catch(() => []);
+        // Server-side sums: every order’s totalAmount (COD + online), IST month for MTD — avoids
+        // browser timezone drift and old “Paid-only” client bugs that showed tiny totals like ₹5,875.
+        const res = await fetch(`${API_BASE}/api/admin/orders/stats/dashboard`, { headers });
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           if (res.status === 401) {
             logout();
@@ -54,37 +57,24 @@ export default function HomePage() {
           throw new Error(data?.error?.message || "Failed to load overview");
         }
 
-        const orders = Array.isArray(data) ? data : [];
-        const now = new Date();
-
-        const customerKeys = new Set();
-        let revenueMtd = 0;
-
-        orders.forEach((o) => {
-          const email = (o.customerEmail || "").toLowerCase();
-          const phone = (o.customerPhone || "").trim();
-          const name = o.customerName || "";
-          const key = email || phone || name || o._id;
-          if (key) customerKeys.add(key);
-
-          // MTD sales = sum of all placed orders this month (COD is Pending but still revenue).
-          // Previously only paymentStatus === "Paid" was counted, which excluded almost all COD.
-          const amt = Number(o.totalAmount);
-          if (Number.isFinite(amt) && amt > 0 && o.createdAt) {
-            const d = new Date(o.createdAt);
-            if (
-              d.getFullYear() === now.getFullYear() &&
-              d.getMonth() === now.getMonth()
-            ) {
-              revenueMtd += amt;
-            }
-          }
-        });
+        const revenueMtd = Number(data.revenueMtd) || 0;
+        const revenueAllTime = Number(data.revenueAllTime) || 0;
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log("[Dashboard] stats from API", {
+            revenueMtd,
+            revenueAllTime,
+            orderCount: data.orderCount,
+            orderCountMtd: data.orderCountMtd,
+            period: data.period,
+          });
+        }
 
         setStats({
-          orders: orders.length,
-          customers: customerKeys.size,
+          orders: Number(data.orderCount) || 0,
+          customers: Number(data.customerCount) || 0,
           revenueMtd,
+          revenueAllTime,
         });
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -113,6 +103,7 @@ export default function HomePage() {
     {
       label: "Revenue (MTD)",
       value: formatInr(stats.revenueMtd),
+      sub: `All-time ${formatInr(stats.revenueAllTime)}`,
       icon: DollarSign,
       to: "/orders",
       color: "bg-amber-50 text-amber-600",
@@ -136,7 +127,7 @@ export default function HomePage() {
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {quickStats.map(({ label, value, icon: Icon, to, color }) => (
+          {quickStats.map(({ label, value, sub, icon: Icon, to, color }) => (
             <Link
               key={label}
               to={to}
@@ -145,11 +136,14 @@ export default function HomePage() {
               <span className={`p-2.5 rounded-lg ${color}`}>
                 <Icon size={22} strokeWidth={2} />
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-500">{label}</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5 tabular-nums break-words leading-tight">
                   {value}
                 </p>
+                {sub != null && sub !== "" && (
+                  <p className="text-xs text-gray-500 mt-1 tabular-nums break-words">{sub}</p>
+                )}
               </div>
             </Link>
           ))}
